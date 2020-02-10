@@ -12,7 +12,7 @@
     "html-loader": "^0.5.5",
     "line-by-line": "^0.1.6",
     "react-native-dom-parser": "^1.5.3",
-    "sequelize": "^5.9.4",
+    "sequelize": "^5.15.1",
     "serverless-appsync-plugin": "^1.0.9",
     "serverless-dynamodb-autoscaling": "^0.6.2",
     "serverless-iam-roles-per-function": "^1.0.4",
