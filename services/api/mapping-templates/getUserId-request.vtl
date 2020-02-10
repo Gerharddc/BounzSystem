@@ -1,0 +1,11 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "Query",
+    "query" : {
+        "expression": "username_lcase = :u",
+        "expressionValues" : {
+            ":u" : $util.dynamodb.toDynamoDBJson($ctx.args.username)
+        }
+    },
+    "index": "username_lcase-index"
+}

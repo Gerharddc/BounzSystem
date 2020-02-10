@@ -1,0 +1,268 @@
+service: notify
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-pseudo-parameters
+  - serverless-plugin-split-stacks
+
+custom:
+  webpack:
+    packager: 'yarn'
+    includeModules:
+      forceExclude:
+        - aws-sdk
+        - sharp
+        - node-vibrant
+        - sequelize
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+  memorySize: 128
+  apiname: "${self:service.name}-${self:provider.stage}"
+  versionFunctions: false
+  timeout: 30
+  environment:
+    STAGE: ${self:provider.stage}
+
+    COURT_INFO_TABLE: { Fn::ImportValue: "CourtInfoTableName-${self:provider.stage}" }
+    COURT_MEMBERS_TABLE: { Fn::ImportValue: "CourtMembersTableName-${self:provider.stage}" }
+    COURT_MEMBERSHIP_REQUESTS_TABLE: { Fn::ImportValue: "CourtMembershipRequestsTableName-${self:provider.stage}" }
+    CONTENT_REPORTS_TABLE: { Fn::ImportValue: "ContentReportsTableName-${self:provider.stage}" }
+    BOUNZES_TABLE: { Fn::ImportValue: "BounzesTableName-${self:provider.stage}" }
+    COMMENTS_TABLE: { Fn::ImportValue: "CommentsTableName-${self:provider.stage}" }
+    FOLLOWERS_TABLE: { Fn::ImportValue: "FollowersTableName-${self:provider.stage}" }
+    MESSAGES_TABLE: { Fn::ImportValue: "MessagesTableName-${self:provider.stage}" }
+    RECEIVED_POSTS_TABLE: { Fn::ImportValue: "ReceivedPostsTableName-${self:provider.stage}" }
+    SENT_POSTS_TABLE: { Fn::ImportValue: "SentPostsTableName-${self:provider.stage}" }
+    USER_INFO_TABLE: { Fn::ImportValue: "UserInfoTableName-${self:provider.stage}" }
+    BLOCKED_USERS_TABLE: { Fn::ImportValue: "BlockedUsersTableName-${self:provider.stage}" }
+    IGNORED_COURTS_TABLE: { Fn::ImportValue: "IgnoredCourtsTableName-${self:provider.stage}" }
+
+    PUBLIC_IMAGES_BUCKET: { Fn::ImportValue: "PublicImagesS3BucketName-${self:provider.stage}" }
+    PUBLIC_UPLOADS_BUCKET: { Fn::ImportValue: "PublicUploadsS3BucketName-${self:provider.stage}" }
+
+    ELASTICSEARCH_URL: { Fn::ImportValue: "ElasticSearchUrl-${self:provider.stage}" }
+    PINPOINT_APP_ID: "${ssm:PinpointAppId-${self:provider.stage}}"
+
+package:
+  individually: true
+  exclude:
+    - ./**
+
+functions:          
+  NotifyCourtMembershipRequests:
+    handler: NotifyCourtMembershipRequests.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "CourtMembershipRequestsTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyCourtMembershipRequests.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"
+  NotifyNewCourtMembers:
+    handler: NotifyNewCourtMembers.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "CourtMembersTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewCourtMembers.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"
+  NotifyNewCourt:
+    handler: NotifyNewCourt.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "CourtInfoTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewCourt.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+                - index/*
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"
+  NotifyNewFollowers:
+    handler: NotifyNewFollowers.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "FollowersTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewFollowers.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"
+  NotifyNewBounz:
+    handler: NotifyNewBounz.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "BounzesTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewBounz.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"
+  NotifyNewComments:
+    handler: NotifyNewComments.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "CommentsTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewComments.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"
+  NotifyNewMessage:
+    handler: NotifyNewMessage.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "MessagesTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewMessage.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          Fn::Join:
+            - /
+            - - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+              - index/username_lcase-index
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"      
+  NotifyNewPost:
+    handler: NotifyNewPost.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "SentPostsTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewPosts.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+          - { Fn::ImportValue: "IgnoredCourtsTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+                - index/username_lcase-index
+          - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+                - index/*
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"
+  NotifyNewContentReport:
+    handler: NotifyNewContentReport.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "ContentReportsTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyNewContentReport.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - ses:SendEmail
+        Resource: "*"
+  NotifyMoreBounty:
+    handler: NotifyMoreBounty.handler
+    events:
+      - stream:
+          type: dynamodb
+          arn: { Fn::ImportValue: "UserInfoTableStreamArn-${self:provider.stage}" }
+    package:
+      include:
+        - NotifyMoreBounty.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*"       

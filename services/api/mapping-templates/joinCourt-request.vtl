@@ -1,0 +1,9 @@
+#if( $ctx.args.input.memberId != $ctx.identity.username )
+	##$util.unauthorized()
+#end
+
+{
+  "version" : "2017-02-28",
+  "operation": "Invoke",
+  "payload": $util.toJson($context.args.input)
+}

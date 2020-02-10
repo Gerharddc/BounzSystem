@@ -1,0 +1,16 @@
+#if($ctx.identity.username != $ctx.args.blockerId)
+	$util.unauthorized()
+#end
+
+#if($ctx.args.blockerId == $ctx.args.blockeeId)
+	$util.error("blockerId cannot equal blockeeId")
+#end
+
+{
+    "version" : "2017-02-28",
+    "operation" : "PutItem",
+    "key" : {
+        "blockerId": $util.dynamodb.toDynamoDBJson($ctx.args.blockerId),
+        "blockeeId": $util.dynamodb.toDynamoDBJson($ctx.args.blockeeId)
+    }
+}

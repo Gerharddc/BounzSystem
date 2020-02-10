@@ -1,0 +1,17 @@
+#if($ctx.identity.username != $ctx.args.blockerId)
+	$util.unauthorized()
+#end
+
+#if($ctx.args.blockerId == $ctx.args.blockeeId)
+	$util.error("blockerId cannot equal blockeeId")
+#end
+
+{
+    "version" : "2018-05-29",
+    "operation" : "DeleteItem",
+    "key" : {
+        ## If object "id" should come from GraphQL arguments, change to $util.dynamodb.toDynamoDBJson($ctx.args.id)
+        "blockerId": $util.dynamodb.toDynamoDBJson($ctx.args.blockerId),
+        "blockeeId": $util.dynamodb.toDynamoDBJson($ctx.args.blockeeId)
+    }
+}

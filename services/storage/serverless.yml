@@ -1,0 +1,139 @@
+service: storage
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+  runtime: nodejs8.10
+
+custom:
+  uploadsBucketName: ${self:service}-${self:provider.stage}-bounzpublicuploads
+
+plugins:
+  - serverless-step-functions
+  - serverless-pseudo-parameters
+  - serverless-iam-roles-per-function
+
+resources:
+  Resources:
+    PublicImagesS3Bucket:
+      Type: AWS::S3::Bucket
+
+    MiscFilesS3Bucket:
+      Type: AWS::S3::Bucket
+    
+    # Using an s3 event makes us lose the opportunity to automatically get a unique bucket name
+    S3BucketPublicuploads:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:custom.uploadsBucketName}
+
+    DeleteLambdaS3Permissions:
+      Type: AWS::Lambda::Permission
+      Properties:
+        FunctionName: { Fn::GetAtt: [StartExecutionLambdaFunction, Arn] }
+        Principal: "s3.amazonaws.com"
+        Action: "lambda:InvokeFunction"
+        SourceAccount: { Ref: AWS::AccountId }
+        SourceArn: "arn:aws:s3:::${self:custom.uploadsBucketName}"
+
+    PublicReadS3BucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket:
+          Ref: PublicImagesS3Bucket
+        PolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal: "*"
+              Action:
+                - s3:GetObject
+              Resource:
+                Fn::Join:
+                  - ""
+                  - - "arn:aws:s3:::"
+                    - { Ref: PublicImagesS3Bucket }
+                    - "/*"
+  
+    PublicImagesCloudFrontDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Origins:
+            - DomainName: { Fn::GetAtt: [PublicImagesS3Bucket, DomainName] }
+              Id: PublicImages
+              CustomOriginConfig:
+                HTTPPort: 80
+                HTTPSPort: 443
+                OriginProtocolPolicy: match-viewer
+          Enabled: "true"
+          DefaultCacheBehavior:
+            ForwardedValues:
+              QueryString: "false"
+              Cookies:
+                Forward: none
+            TargetOriginId: PublicImages
+            ViewerProtocolPolicy: allow-all
+
+  Outputs:
+    PublicImagesS3BucketArn:
+      Value: { Fn::GetAtt: [PublicImagesS3Bucket, Arn] }
+      Export: { Name: "PublicImagesS3BucketArn-${self:provider.stage}" }
+    PublicImagesS3BucketName:
+      Value: { Ref: PublicImagesS3Bucket }
+      Export: { Name: "PublicImagesS3BucketName-${self:provider.stage}" }
+    PublicUploadsS3BucketArn:
+      Value: { Fn::GetAtt: [S3BucketPublicuploads, Arn] }
+      Export: { Name: "PublicUploadsS3BucketArn-${self:provider.stage}" }
+    PublicUploadsS3BucketName:
+      Value: { Ref: S3BucketPublicuploads }
+      Export: { Name: "PublicUploadsS3BucketName-${self:provider.stage}" }
+    MiscFilesS3BucketArn:
+      Value: { Fn::GetAtt: [MiscFilesS3Bucket, Arn] }
+      Export: { Name: "MiscFilesS3BucketArn-${self:provider.stage}" }
+    MiscFilesS3BucketName:
+      Value: { Ref: MiscFilesS3Bucket }
+      Export: { Name: "MiscFilesS3BucketName-${self:provider.stage}" }
+    PublicImagesDomain:
+      Value: { Fn::GetAtt: [PublicImagesCloudFrontDistribution, DomainName] }
+      Export: { Name: "PublicImagesDomain-${self:provider.stage}" }
+
+functions:
+  StartExecution:
+    handler: handler.start
+    events:
+      - s3: publicuploads
+    environment:
+      statemachine_arn: { Ref: DeleteUploadStateMachine }
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - states:StartExecution
+        Resource: { Ref: DeleteUploadStateMachine }
+  DeleteUpload:
+    handler: handler.delete
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:DeleteObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::GetAtt: [S3BucketPublicuploads, Arn] }
+              - /*
+
+stepFunctions:
+  stateMachines:
+    DeleteUploadStateMachine:
+      name: DeleteUploadStateMachine
+      definition:
+        StartAt: Wait
+        States:
+          Wait:
+            Type: Wait
+            Seconds: 15
+            Next: Delete
+          Delete:
+            Type: Task
+            Resource: "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-DeleteUpload"
+            End: true

@@ -1,0 +1,19 @@
+service: sequelize-layer
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+
+layers:
+  sequelize:
+    path: layer
+    compatibleRuntimes:
+      - nodejs8.10
+
+resources:
+  Outputs:
+    ImageLayerExport:
+      Value:
+        Ref: SequelizeLambdaLayer
+      Export:
+        Name: "SequelizeLambdaLayer-${self:provider.stage}"

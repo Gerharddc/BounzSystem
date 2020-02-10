@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "node-vibrant": "^3.0.0",
+    "sharp": "^0.21.1"
+  }
+}

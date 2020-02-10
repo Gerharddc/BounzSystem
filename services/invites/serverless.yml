@@ -1,0 +1,289 @@
+service: invites
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-pseudo-parameters
+  - serverless-plugin-split-stacks
+
+custom:
+  webpack:
+    packager: 'yarn'
+    includeModules:
+      forceExclude:
+        - aws-sdk
+        - sharp
+        - node-vibrant
+        - sequelize
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+  memorySize: 128
+  apiname: "${self:service.name}-${self:provider.stage}"
+  versionFunctions: false
+  environment:
+    STAGE: ${self:provider.stage}
+
+    COURT_INFO_TABLE: { Fn::ImportValue: "CourtInfoTableName-${self:provider.stage}" }
+    COURT_MEMBERS_TABLE: { Fn::ImportValue: "CourtMembersTableName-${self:provider.stage}" }
+    COURT_MEMBERSHIP_REQUESTS_TABLE: { Fn::ImportValue: "CourtMembershipRequestsTableName-${self:provider.stage}" }
+    CONTENT_REPORTS_TABLE: { Fn::ImportValue: "ContentReportsTableName-${self:provider.stage}" }
+    BOUNZES_TABLE: { Fn::ImportValue: "BounzesTableName-${self:provider.stage}" }
+    COMMENTS_TABLE: { Fn::ImportValue: "CommentsTableName-${self:provider.stage}" }
+    MESSAGES_TABLE: { Fn::ImportValue: "MessagesTableName-${self:provider.stage}" }
+    FOLLOWERS_TABLE: { Fn::ImportValue: "FollowersTableName-${self:provider.stage}" }
+    RECEIVED_POSTS_TABLE: { Fn::ImportValue: "ReceivedPostsTableName-${self:provider.stage}" }
+    SENT_POSTS_TABLE: { Fn::ImportValue: "SentPostsTableName-${self:provider.stage}" }
+    USER_INFO_TABLE: { Fn::ImportValue: "UserInfoTableName-${self:provider.stage}" }
+    BLOCKED_USERS_TABLE: { Fn::ImportValue: "BlockedUsersTableName-${self:provider.stage}" }
+    IGNORED_COURTS_TABLE: { Fn::ImportValue: "IgnoredCourtsTableName-${self:provider.stage}" }
+
+    PUBLIC_IMAGES_BUCKET: { Fn::ImportValue: "PublicImagesS3BucketName-${self:provider.stage}" }
+    PUBLIC_UPLOADS_BUCKET: { Fn::ImportValue: "PublicUploadsS3BucketName-${self:provider.stage}" }
+
+    ELASTICSEARCH_URL: { Fn::ImportValue: "ElasticSearchUrl-${self:provider.stage}" }
+    SQL_HOST: { Fn::ImportValue: "SQLHost-${self:provider.stage}" }
+    PINPOINT_APP_ID: "${ssm:PinpointAppId-${self:provider.stage}}"
+
+package: 
+  individually: true
+  exclude:
+    - ./**
+
+functions:
+  CreateInvite:
+    handler: CreateInvite.handler
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }
+  DeleteInvite:
+    handler: DeleteInvite.handler
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }      
+  CreateInviteResponse:
+    handler: CreateInviteResponse.handler
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }   
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }
+  CreateEvent:
+    handler: CreateEvent.handler
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }
+  DeleteEvent:
+    handler: DeleteEvent.handler
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }      
+  RenderInvite:
+    handler: RenderInvite.handler
+    events:
+      - http:
+          path: renderInvite
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }
+  GetInviteInfo:
+    handler: GetInviteInfo.handler
+    events:
+      - http:
+          path: getInviteInfo
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" } 
+  GetEventInfo:
+    handler: GetEventInfo.handler
+    events:
+      - http:
+          path: getEventInfo
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }
+  GetInviteResponseInfo:
+    handler: GetInviteResponseInfo.handler
+    events:
+      - http:
+          path: getInviteResponseInfo
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }                
+  ListEventResponses:
+    handler: ListEventResponses.handler
+    events:
+      - http:
+          path: listEventResponses
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }     
+  ListUserEvents:
+    handler: ListUserEvents.handler
+    events:
+      - http:
+          path: listUserEvents
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }    
+  ListUserInvitedEvents:
+    handler: ListUserInvitedEvents.handler
+    events:
+      - http:
+          path: listUserInvitedEvents
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" } 
+  UpdateInviteeId:
+    handler: UpdateInviteeId.handler
+    events:
+      - http:
+          path: updateInviteeId
+          method: get
+          cors: true
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }                                         
+  SubmitResponseForm:
+    handler: SubmitResponseForm.handler
+    events:
+      - http:
+          path: submitResponseForm
+          method: post
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }
+
+resources:
+  Outputs:
+    CreateInviteLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateInviteLambdaFunction, Arn]
+      Export:
+        Name: "CreateInviteLambdaArn-${self:provider.stage}"
+    DeleteInviteLambdaArn:
+      Value:
+        Fn::GetAtt: [DeleteInviteLambdaFunction, Arn]
+      Export:
+        Name: "DeleteInviteLambdaArn-${self:provider.stage}"      
+    CreateInviteResponseLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateInviteResponseLambdaFunction, Arn]
+      Export:
+        Name: "CreateInviteResponseLambdaArn-${self:provider.stage}"  
+    GetInviteInfoLambdaArn:
+      Value:
+        Fn::GetAtt: [GetInviteInfoLambdaFunction, Arn]
+      Export:
+        Name: "GetInviteInfoLambdaArn-${self:provider.stage}" 
+    GetEventInfoLambdaArn:
+      Value:
+        Fn::GetAtt: [GetEventInfoLambdaFunction, Arn]
+      Export:
+        Name: "GetEventInfoLambdaArn-${self:provider.stage}"     
+    GetInviteResponseInfoLambdaArn:
+      Value:
+        Fn::GetAtt: [GetInviteResponseInfoLambdaFunction, Arn]
+      Export:
+        Name: "GetInviteResponseInfoLambdaArn-${self:provider.stage}"         
+    CreateEventLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateEventLambdaFunction, Arn]
+      Export:
+        Name: "CreateEventLambdaArn-${self:provider.stage}"
+    DeleteEventLambdaArn:
+      Value:
+        Fn::GetAtt: [DeleteEventLambdaFunction, Arn]
+      Export:
+        Name: "DeleteEventLambdaArn-${self:provider.stage}" 
+    UpdateInviteeIdLambdaArn:
+      Value:
+        Fn::GetAtt: [UpdateInviteeIdLambdaFunction, Arn]
+      Export:
+        Name: "UpdateInviteeIdLambdaArn-${self:provider.stage}"          
+    ListEventResponsesLambdaArn:
+      Value:
+        Fn::GetAtt: [ListEventResponsesLambdaFunction, Arn]
+      Export:
+        Name: "ListEventResponsesLambdaArn-${self:provider.stage}"      
+    ListUserEventsLambdaArn:
+      Value:
+        Fn::GetAtt: [ListUserEventsLambdaFunction, Arn]
+      Export:
+        Name: "ListUserEventsLambdaArn-${self:provider.stage}"   
+    ListUserInvitedEventsLambdaArn:
+      Value:
+        Fn::GetAtt: [ListUserInvitedEventsLambdaFunction, Arn]
+      Export:
+        Name: "ListUserInvitedEventsLambdaArn-${self:provider.stage}"          

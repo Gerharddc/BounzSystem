@@ -1,0 +1,152 @@
+service: auth
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+  apiname: "${self:service.name}-${self:provider.stage}"
+
+resources:
+  Resources:
+    PublicUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        AliasAttributes:
+          - phone_number
+          - email
+          - preferred_username
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireUppercase: true
+        AutoVerifiedAttributes:
+          - email
+        Schema:
+          - Name: birthdate
+            Required: true
+          - Name: email
+            Required: true
+            Mutable: true
+          - Name: gender
+            Required: true
+            Mutable: true
+          - Name: name
+            Required: true
+            Mutable: true
+          - Name: "family_name"
+            Required: true
+            Mutable: true
+          - Name: "preferred_username"
+            Required: "false"
+            Mutable: true
+    
+    WebUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        GenerateSecret: false
+        UserPoolId: { Ref: PublicUserPool }
+
+    ServerUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        GenerateSecret: false
+        UserPoolId: { Ref: PublicUserPool }
+        ExplicitAuthFlows:
+          - ADMIN_NO_SRP_AUTH
+    
+    PublicIdentityPool:
+      Type: AWS::Cognito::IdentityPool
+      Properties:
+        AllowUnauthenticatedIdentities: false
+        CognitoIdentityProviders:
+          - ClientId: { Ref: WebUserPoolClient }
+            ProviderName: { Fn::GetAtt: [PublicUserPool, ProviderName] }
+            ServerSideTokenCheck: true
+  
+    IdentityPoolRoleAttachment:
+      Type: AWS::Cognito::IdentityPoolRoleAttachment
+      Properties:
+        IdentityPoolId: { Ref: PublicIdentityPool }
+        Roles:
+          authenticated: { Fn::GetAtt: ["CognitoPublicAuthRole", "Arn"] }
+    
+    CognitoPublicAuthRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Federated:
+                  - cognito-identity.amazonaws.com
+              Action: sts:AssumeRoleWithWebIdentity
+              Condition:
+                "ForAnyValue:StringLike":
+                  "cognito-identity.amazonaws.com:amr": "authenticated"
+        Policies:
+          - PolicyName: "CognitoPublicAuth"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - s3:PutObject
+                  Resource:
+                    Fn::Join:
+                      - ""
+                      - - { Fn::ImportValue: "PublicUploadsS3BucketArn-${self:provider.stage}" }
+                        - /*
+                - Effect: Allow
+                  Action:
+                    - mobiletargeting:PutEvents
+                    - mobiletargeting:UpdateEndpoint
+                    - mobiletargeting:GetUserEndpoints
+                  Resource: "*" # TODO
+                - Effect: Allow
+                  Action:
+                    - s3:GetObject
+                  Resource:
+                    Fn::Join:
+                      - ""
+                      - - { Fn::ImportValue: "MiscFilesS3BucketArn-${self:provider.stage}" }
+                        - /*
+
+    PublicUserPoolIdSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: PublicUserPoolId-${self:provider.stage}
+        Type: String
+        Value: { Ref: PublicUserPool }
+    PublicIdentityPoolIdSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: PublicIdentityPoolId-${self:provider.stage}
+        Type: String
+        Value: { Ref: PublicIdentityPool }
+    PublicUserPoolArnSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: PublicUserPoolArn-${self:provider.stage}
+        Type: String
+        Value: { Fn::GetAtt: [PublicUserPool, Arn] }
+    ServerClientIdSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: ServerClientId-${self:provider.stage}
+        Type: String
+        Value: { Ref: ServerUserPoolClient }
+    WebClientIdSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: WebClientId-${self:provider.stage}
+        Type: String
+        Value: { Ref: WebUserPoolClient }
+    CognitoSystemPasswordSSM: # TODO: use secure version
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: CognitoSystemPassword-${self:provider.stage}
+        Type: String
+        Value: "Password1!"

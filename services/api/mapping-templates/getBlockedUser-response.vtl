@@ -1,0 +1,11 @@
+#if($util.isNull($ctx.result))
+	#set($blocked = false)
+#else
+	#set($blocked = true)
+#end
+
+$util.toJson({
+	"blockerId": $ctx.args.blockerId,
+    "blockeeId": $ctx.args.blockeeId,
+    "blocked": $blocked
+})

@@ -1,0 +1,22 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "UpdateItem",
+    "key" : {
+        "creatorId": $util.dynamodb.toDynamoDBJson($ctx.args.input.creatorId),
+        "postedDate": $util.dynamodb.toDynamoDBJson($ctx.args.input.postedDate)
+    },
+    "update" : {
+    	"expression": "ADD receipts :c",
+        "expressionValues": {
+        	":c": $util.dynamodb.toDynamoDBJson($ctx.args.input.count)
+        }
+    },
+    ## This condition ensures no new records are created
+    "condition" : {
+    	"expression": "creatorId = :i and postedDate = :p",
+        "expressionValues": {
+        	":i": $util.dynamodb.toDynamoDBJson($ctx.args.input.creatorId),
+            ":p": $util.dynamodb.toDynamoDBJson($ctx.args.input.postedDate)
+        }
+    }
+}

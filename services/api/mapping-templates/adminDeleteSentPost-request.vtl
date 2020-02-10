@@ -1,0 +1,8 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "DeleteItem",
+    "key" : {
+        "creatorId" : { "S" : "${ctx.args.input.creatorId}" },
+        "postedDate" : { "S" : "${ctx.args.input.postedDate}" }
+    }
+}

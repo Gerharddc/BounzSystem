@@ -1,0 +1,8 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "DeleteItem",
+    "key" : {
+        "commentDate" : { "S" : "${ctx.args.input.commentDate}" },
+        "postId" : { "S" : "${ctx.args.input.postId}" }
+    }
+}

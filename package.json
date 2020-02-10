@@ -1,0 +1,28 @@
+{
+  "scripts": {
+    "generate-queries": "node ./scripts/generate-queries.js",
+    "generate-sysconf": "node ./scripts/generate-sysconf.js",
+    "postinstall": "yarn run generate-queries"
+  },
+  "dependencies": {
+    "amplify-graphql-docs-generator": "^1.4.3",
+    "aws-appsync-codegen": "^0.17.5",
+    "aws-sdk": "^2.395.0",
+    "ejs": "^2.6.2",
+    "html-loader": "^0.5.5",
+    "line-by-line": "^0.1.6",
+    "react-native-dom-parser": "^1.5.3",
+    "sequelize": "^5.9.4",
+    "serverless-appsync-plugin": "^1.0.9",
+    "serverless-dynamodb-autoscaling": "^0.6.2",
+    "serverless-iam-roles-per-function": "^1.0.4",
+    "serverless-plugin-split-stacks": "^1.7.0",
+    "serverless-pseudo-parameters": "^2.4.0",
+    "serverless-step-functions": "^1.10.0",
+    "serverless-webpack": "^5.2.0",
+    "ts-loader": "^5.3.3",
+    "typescript": "^3.2.4",
+    "webpack": "^4.29.0",
+    "webpack-node-externals": "^1.7.2"
+  }
+}

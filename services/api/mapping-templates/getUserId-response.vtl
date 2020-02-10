@@ -1,0 +1,9 @@
+#if( $ctx.result.items.size() > 0 )
+	#set( $item = $ctx.result.items[0] )
+	$util.toJson({
+    	"userId": $item.userId,
+        "username": $item.username_lcase
+    })
+#else
+	$util.toJson(null)
+#end

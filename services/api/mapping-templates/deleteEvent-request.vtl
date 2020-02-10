@@ -1,0 +1,7 @@
+#set($dummy = $context.arguments.put("callerId", $ctx.identity.username))
+
+{
+    "version" : "2017-02-28",
+    "operation": "Invoke",
+    "payload": $util.toJson($context.arguments)
+}

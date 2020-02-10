@@ -1,0 +1,149 @@
+service: sql
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+
+resources:
+  Resources:
+    VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: "10.0.0.0/16"
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+    VPCGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        VpcId:
+          Ref: VPC
+        InternetGatewayId:
+          Ref: InternetGateway
+    PrivateSubnetA:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: VPC
+        AvailabilityZone: ${self:provider.region}a
+        CidrBlock: "10.0.3.0/24"
+    PrivateSubnetB:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: VPC
+        AvailabilityZone: ${self:provider.region}b
+        CidrBlock: "10.0.4.0/24"
+    PublicSubnetA:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: VPC
+        AvailabilityZone: ${self:provider.region}a
+        CidrBlock: "10.0.5.0/24"
+    PrivateRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId:
+          Ref: VPC
+    PrivateRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Ref: PrivateRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId:
+          Ref: InternetGateway
+    PublicRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId:
+          Ref: VPC
+    PublicRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Ref: PublicRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId:
+          Ref: InternetGateway
+    SubnetRouteTableAssociationLambdaPrivateA:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId:
+          Ref: PrivateSubnetA
+        RouteTableId:
+          Ref: PrivateRouteTable
+    SubnetRouteTableAssociationLambdaPrivateB:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId:
+          Ref: PrivateSubnetB
+        RouteTableId:
+          Ref: PrivateRouteTable
+    SubnetRouteTableAssociationLambdaPublicA:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId:
+          Ref: PublicSubnetA
+        RouteTableId:
+          Ref: PublicRouteTable
+    ServerlessSecurityGroup:
+      DependsOn: VPC
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup for Serverless Functions
+        VpcId:
+          Ref: VPC
+    ServerlessStorageSecurityGroup:
+      DependsOn: VPC
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Ingress for PostgreSQL
+        VpcId:
+          Ref: VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '5432'
+          ToPort: '5432'
+          SourceSecurityGroupId:
+            Ref: ServerlessSecurityGroup
+    ServerlessSQLSubnetGroup:
+      Type: AWS::RDS::DBSubnetGroup
+      Properties:
+        DBSubnetGroupDescription: "SQL Subnet Group"
+        SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
+    SQL:
+      Type: AWS::RDS::DBInstance
+      Properties:
+        Engine: postgres
+        DBInstanceClass: db.t2.micro
+        AllocatedStorage: 20
+        MasterUsername: Bounz
+        MasterUserPassword: Password
+        VPCSecurityGroups:
+          - Ref: ServerlessStorageSecurityGroup
+        DBSubnetGroupName:
+          Ref: ServerlessSQLSubnetGroup
+
+  Outputs:
+    SQLSecurityGroupId:
+      Value:
+        Fn::GetAtt: ServerlessSecurityGroup.GroupId
+      Export:
+        Name: "SQLSecurityGroupId-${self:provider.stage}"
+    SQLSubnetId:
+      Value:
+        Ref: PublicSubnetA
+      Export:
+        Name: "SQLSubnetId-${self:provider.stage}"
+    SQLHost:
+      Value:
+        Fn::GetAtt: [SQL, Endpoint.Address]
+      Export:
+        Name: "SQLHost-${self:provider.stage}"

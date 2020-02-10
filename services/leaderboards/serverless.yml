@@ -1,0 +1,217 @@
+service: leaderboards
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-pseudo-parameters
+
+custom:
+  config:
+    CACHE_INSTANCE_SIZE: cache.t2.micro
+  webpack:
+    packager: 'yarn'
+    includeModules:
+      forceExclude:
+        - aws-sdk
+        - sharp
+        - node-vibrant
+        - sequelize
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+  memorySize: 128
+  apiname: "${self:service.name}-${self:provider.stage}"
+  versionFunctions: false
+  environment:
+    STAGE: ${self:provider.stage}
+    COURT_INFO_TABLE: { Fn::ImportValue: "CourtInfoTableName-${self:provider.stage}" }
+    PUBLIC_IMAGES_DOMAIN: { Fn::ImportValue: "PublicImagesDomain-${self:provider.stage}" }
+    REDIS_HOST:
+      "Fn::GetAtt": [ElasticCacheCluster, RedisEndpoint.Address]
+
+functions:
+  GetLeaderboard:
+    handler: GetLeaderboard.handler
+    vpc:
+      securityGroupIds:
+        - "Fn::GetAtt": ServerlessSecurityGroup.GroupId
+      subnetIds:
+        - Ref: PublicSubnetA
+        - Ref: PublicSubnetB
+    events:
+      - http:
+          path: getLeaderboard
+          method: get
+          cors: true
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+  ListLeaderboards:
+    handler: ListLeaderboards.handler
+    events:
+      - http:
+          path: listLeaderboards
+          method: get
+          cors: true
+
+resources:
+  Resources:
+    VPC:
+      Type: AWS::EC2::VPC
+      Properties:
+        CidrBlock: "10.0.0.0/16"
+    InternetGateway:
+      Type: AWS::EC2::InternetGateway
+    VPCGatewayAttachment:
+      Type: AWS::EC2::VPCGatewayAttachment
+      Properties:
+        VpcId:
+          Ref: VPC
+        InternetGatewayId:
+          Ref: InternetGateway
+    PrivateSubnetA:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: VPC
+        AvailabilityZone: ${self:provider.region}a
+        CidrBlock: "10.0.1.0/24"
+    PublicSubnetA:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: VPC
+        AvailabilityZone: ${self:provider.region}a
+        CidrBlock: "10.0.2.0/24"
+    PublicSubnetB:
+      DependsOn: VPC
+      Type: AWS::EC2::Subnet
+      Properties:
+        VpcId:
+          Ref: VPC
+        AvailabilityZone: ${self:provider.region}b
+        CidrBlock: "10.0.6.0/24"
+    PrivateRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId:
+          Ref: VPC
+    PrivateRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Ref: PrivateRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId:
+          Ref: InternetGateway
+    PublicRouteTable:
+      Type: AWS::EC2::RouteTable
+      Properties:
+        VpcId:
+          Ref: VPC
+    PublicRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Ref: PublicRouteTable
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId:
+          Ref: InternetGateway
+    SubnetRouteTableAssociationLambdaPrivateA:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId:
+          Ref: PrivateSubnetA
+        RouteTableId:
+          Ref: PrivateRouteTable
+    SubnetRouteTableAssociationLambdaPublicA:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId:
+          Ref: PublicSubnetA
+        RouteTableId:
+          Ref: PublicRouteTable
+    SubnetRouteTableAssociationLambdaPublicB:
+      Type: AWS::EC2::SubnetRouteTableAssociation
+      Properties:
+        SubnetId:
+          Ref: PublicSubnetB
+        RouteTableId:
+          Ref: PublicRouteTable
+    ServerlessSecurityGroup:
+      DependsOn: VPC
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: SecurityGroup for Serverless Functions
+        VpcId:
+          Ref: VPC
+    ServerlessStorageSecurityGroup:
+      DependsOn: VPC
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: Ingress for Redis Cluster
+        VpcId:
+          Ref: VPC
+        SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '6379'
+          ToPort: '6379'
+          SourceSecurityGroupId:
+            Ref: ServerlessSecurityGroup
+    ServerlessCacheSubnetGroup:
+      Type: AWS::ElastiCache::SubnetGroup
+      Properties:
+        Description: "Cache Subnet Group"
+        SubnetIds:
+        - Ref: PrivateSubnetA
+    DynamoDBEndpoint: # TODO: policy document
+      Type: AWS::EC2::VPCEndpoint
+      Properties:
+        RouteTableIds:
+          - Ref: PrivateRouteTable
+          - Ref: PublicRouteTable
+        ServiceName: "com.amazonaws.${self:provider.region}.dynamodb"
+        VpcId:
+          Ref: VPC
+    ElasticCacheCluster:
+      DependsOn: ServerlessStorageSecurityGroup
+      Type: AWS::ElastiCache::CacheCluster
+      Properties:
+        AutoMinorVersionUpgrade: true
+        Engine: redis
+        CacheNodeType: ${self:custom.config.CACHE_INSTANCE_SIZE}
+        NumCacheNodes: 1
+        VpcSecurityGroupIds:
+        - "Fn::GetAtt": ServerlessStorageSecurityGroup.GroupId
+        CacheSubnetGroupName:
+          Ref: ServerlessCacheSubnetGroup
+
+  Outputs:
+    LeaderboardSecurityGroupId:
+      Value:
+        Fn::GetAtt: ServerlessSecurityGroup.GroupId
+      Export:
+        Name: "LeaderboardSecurityGroupId-${self:provider.stage}"
+    LeaderboardSubnetId:
+      Value:
+        Ref: PublicSubnetA
+      Export:
+        Name: "LeaderboardSubnetIdA-${self:provider.stage}"
+    LeaderboardSubnetIdB:
+      Value:
+        Ref: PublicSubnetB
+      Export:
+        Name: "LeaderboardSubnetIdB-${self:provider.stage}"
+    LeaderboardRedisHost:
+      Value:
+        Fn::GetAtt: [ElasticCacheCluster, RedisEndpoint.Address]
+      Export:
+        Name: "LeaderboardRedisHost-${self:provider.stage}"

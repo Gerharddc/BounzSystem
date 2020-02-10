@@ -1,0 +1,809 @@
+service: compute
+
+plugins:
+  - serverless-webpack
+  - serverless-iam-roles-per-function
+  - serverless-pseudo-parameters
+  - serverless-plugin-split-stacks
+
+custom:
+  webpack:
+    packager: 'yarn'
+    includeModules:
+      forceExclude:
+        - aws-sdk
+        - sharp
+        - node-vibrant
+        - sequelize
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+  memorySize: 128
+  apiname: "${self:service.name}-${self:provider.stage}"
+  versionFunctions: false
+  environment:
+    STAGE: ${self:provider.stage}
+
+    COURT_INFO_TABLE: { Fn::ImportValue: "CourtInfoTableName-${self:provider.stage}" }
+    COURT_MEMBERS_TABLE: { Fn::ImportValue: "CourtMembersTableName-${self:provider.stage}" }
+    COURT_MEMBERSHIP_REQUESTS_TABLE: { Fn::ImportValue: "CourtMembershipRequestsTableName-${self:provider.stage}" }
+    CONTENT_REPORTS_TABLE: { Fn::ImportValue: "ContentReportsTableName-${self:provider.stage}" }
+    BOUNZES_TABLE: { Fn::ImportValue: "BounzesTableName-${self:provider.stage}" }
+    COMMENTS_TABLE: { Fn::ImportValue: "CommentsTableName-${self:provider.stage}" }
+    MESSAGES_TABLE: { Fn::ImportValue: "MessagesTableName-${self:provider.stage}" }
+    FOLLOWERS_TABLE: { Fn::ImportValue: "FollowersTableName-${self:provider.stage}" }
+    RECEIVED_POSTS_TABLE: { Fn::ImportValue: "ReceivedPostsTableName-${self:provider.stage}" }
+    SENT_POSTS_TABLE: { Fn::ImportValue: "SentPostsTableName-${self:provider.stage}" }
+    USER_INFO_TABLE: { Fn::ImportValue: "UserInfoTableName-${self:provider.stage}" }
+    BLOCKED_USERS_TABLE: { Fn::ImportValue: "BlockedUsersTableName-${self:provider.stage}" }
+    IGNORED_COURTS_TABLE: { Fn::ImportValue: "IgnoredCourtsTableName-${self:provider.stage}" }
+
+    PUBLIC_IMAGES_BUCKET: { Fn::ImportValue: "PublicImagesS3BucketName-${self:provider.stage}" }
+    PUBLIC_UPLOADS_BUCKET: { Fn::ImportValue: "PublicUploadsS3BucketName-${self:provider.stage}" }
+
+    ELASTICSEARCH_URL: { Fn::ImportValue: "ElasticSearchUrl-${self:provider.stage}" }
+    SQL_HOST: { Fn::ImportValue: "SQLHost-${self:provider.stage}" }
+    PINPOINT_APP_ID: "${ssm:PinpointAppId-${self:provider.stage}}"
+
+package: 
+  individually: true
+  exclude:
+    - ./**
+
+functions:
+  CreateCourt:
+    handler: CreateCourt.handler
+    memorySize: 1024
+    package:
+      include:
+        - CreateCourt.js
+    layers:
+      - { Fn::ImportValue: "ImageLambdaLayer-${self:provider.stage}" }
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+          - dynamodb:PutItem
+        Resource:
+          - { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+                - index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "CourtMembersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicUploadsS3BucketArn-${self:provider.stage}" }
+              - "/*"
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+              - /*  
+      - Effect: Allow
+        Action:
+          - rekognition:DetectModerationLabels
+        Resource: "*"
+  JoinCourt:
+    handler: JoinCourt.handler
+    package:
+      include:
+        - JoinCourt.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "CourtMembersTableArn-${self:provider.stage}" }
+  RequestToJoinCourt:
+    handler: RequestToJoinCourt.handler
+    package:
+      include:
+        - RequestToJoinCourt.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "CourtMembershipRequestsTableArn-${self:provider.stage}" }
+  AcceptCourtMembershipRequest:
+    handler: AcceptCourtMembershipRequest.handler
+    package:
+      include:
+        - AcceptCourtMembershipRequest.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: { Fn::ImportValue: "CourtMembershipRequestsTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "CourtMembersTableArn-${self:provider.stage}" }
+
+      - Effect: Allow
+        Action:
+          - mobiletargeting:SendUsersMessages
+        Resource: "*" 
+  DeclineCourtMembershipRequest:
+    handler: DeclineCourtMembershipRequest.handler
+    package:
+      include:
+        - DeclineCourtMembershipRequest.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: { Fn::ImportValue: "CourtMembershipRequestsTableArn-${self:provider.stage}" }          
+  CreatePost: # TODO: trim permissions
+    handler: CreatePost.handler
+    memorySize: 1024
+    package:
+      include:
+        - CreatePost.js
+    layers:
+      - { Fn::ImportValue: "ImageLambdaLayer-${self:provider.stage}" }
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+                - index/username_lcase-index
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+                - index/*
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "SentPostsTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicUploadsS3BucketArn-${self:provider.stage}" }
+              - "/*"
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+              - /*  
+      - Effect: Allow
+        Action:
+          - rekognition:DetectModerationLabels
+        Resource: "*"
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminInitiateAuth
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+          - { Fn::ImportValue: "CourtMembersTableArn-${self:provider.stage}" }
+  CreateBounz: # TODO: trim permissions
+    handler: CreateBounz.handler
+    package:
+      include:
+        - CreateBounz.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "SentPostsTableArn-${self:provider.stage}" }
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "BounzesTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "FollowersTableArn-${self:provider.stage}" }
+                - index/*
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminInitiateAuth
+        Resource: "*" # TODO
+  CheckUsernameExists:
+    handler: CheckUsernameExists.handler
+    package:
+      include:
+        - CheckUsernameExists.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource: 
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+                - index/username_lcase-index
+    events:
+      - http:
+          path: checkUsernameExists
+          method: get
+          cors: true
+  CheckEmailExists:
+    handler: CheckEmailExists.handler
+    package:
+      include:
+        - CheckEmailExists.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - cognito-idp:listUsers
+        Resource: "*"  #TODO
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+    events:
+      - http:
+          path: checkEmailExists
+          method: get
+          cors: true        
+  UpdateProfilePic:
+    handler: UpdateProfilePic.handler
+    memorySize: 1024
+    package:
+      include:
+        - UpdateProfilePic.js
+    layers:
+      - { Fn::ImportValue: "ImageLambdaLayer-${self:provider.stage}" }
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicUploadsS3BucketArn-${self:provider.stage}" }
+              - "/*"
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+              - /*  
+      - Effect: Allow
+        Action:
+          - rekognition:DetectModerationLabels
+        Resource: "*"
+      - Effect: Allow
+        Action:
+          - s3:DeleteObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+              - /profile-pics/*
+      - Effect: Allow
+        Action:
+          - s3:ListBucket
+        Resource: { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+  UpdateCourtPic:
+    handler: UpdateCourtPic.handler
+    memorySize: 1024
+    package:
+      include:
+        - UpdateCourtPic.js
+    layers:
+      - { Fn::ImportValue: "ImageLambdaLayer-${self:provider.stage}" }
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "CourtInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - s3:GetObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicUploadsS3BucketArn-${self:provider.stage}" }
+              - "/*"
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+              - /*  
+      - Effect: Allow
+        Action:
+          - rekognition:DetectModerationLabels
+        Resource: "*"
+      - Effect: Allow
+        Action:
+          - s3:DeleteObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+              - /court-pics/*
+      - Effect: Allow
+        Action:
+          - s3:ListBucket
+        Resource: { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+  CreateComment:
+    handler: CreateComment.handler
+    package:
+      include:
+        - CreateComment.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "SentPostsTableArn-${self:provider.stage}" }
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "CommentsTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+                - index/username_lcase-index
+  DeleteComment:
+    handler: DeleteComment.handler
+    package:
+      include:
+        - DeleteComment.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "CommentsTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: { Fn::ImportValue: "CommentsTableArn-${self:provider.stage}" }
+  CreateMessage:
+    handler: CreateMessage.handler
+    package:
+      include:
+        - CreateMessage.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "MessagesTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:Query
+        Resource:
+          - Fn::Join:
+              - /
+              - - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+                - index/username_lcase-index
+  DeleteMessage:
+    handler: DeleteMessage.handler
+    package:
+      include:
+        - DeleteMessage.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "MessagesTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - dynamodb:DeleteItem
+        Resource: { Fn::ImportValue: "MessagesTableArn-${self:provider.stage}" }      
+  CreateUserInfo:
+    handler: CreateUserInfo.handler
+    package:
+      include:
+        - CreateUserInfo.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "PublicImagesS3BucketArn-${self:provider.stage}" }
+              - /*  
+      - Effect: Allow
+        Action:
+          - dynamodb:PutItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminUpdateUserAttributes
+        Resource: "*" # TODO
+  UpdateUsername:
+    handler: UpdateUsername.handler
+    package:
+      include:
+        - UpdateUsername.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminUpdateUserAttributes
+        Resource: "*" # TODO
+  UpdateMessageRead:
+    handler: UpdateMessageRead.handler
+    package:
+      include:
+        - UpdateMessageRead.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:UpdateItem
+        Resource: { Fn::ImportValue: "MessagesTableArn-${self:provider.stage}" }
+  UpdateUserRealName:
+    handler: UpdateUserRealName.handler
+    package:
+      include:
+        - UpdateUserRealName.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminUpdateUserAttributes
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - es:*
+        Resource:
+          Fn::Join:
+            - ""
+            - - { Fn::ImportValue: "ElasticSearchARN-${self:provider.stage}" }
+              - "/*"
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+  GetUserInfo:
+    handler: GetUserInfo.handler
+    package:
+      include:
+        - GetUserInfo.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+  GetUserRealName:
+    handler: GetUserRealName.handler
+    package:
+      include:
+        - GetUserRealName.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminGetUser
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+  GetUserRealName2:
+    handler: GetUserRealName2.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource:
+          - { Fn::ImportValue: "BlockedUsersTableArn-${self:provider.stage}" }
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminGetUser
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+  GetSystemInfo:
+    handler: GetSystemInfo.handler
+    package:
+      include:
+        - GetSystemInfo.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: 
+          - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter/SystemStatus-${self:provider.stage}"
+          - "arn:aws:ssm:#{AWS::Region}:#{AWS::AccountId}:parameter/MinApi-${self:provider.stage}"
+    events:
+      - http:
+          path: systemInfo
+          method: get
+          cors: true
+  PaymentCallback:
+    handler: PaymentCallback.handler
+    package:
+      include:
+        - PaymentCallback.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminInitiateAuth
+        Resource: ${ssm:PublicUserPoolArn-${self:provider.stage}}
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+    events:
+      - http:
+          path: PaymentCallback
+          method: post
+          cors: true
+  AttachBountyToPost:
+    handler: AttachBountyToPost.handler
+    package:
+      include:
+        - AttachBountyToPost.js
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - cognito-idp:AdminInitiateAuth
+        Resource: ${ssm:PublicUserPoolArn-${self:provider.stage}}
+      - Effect: Allow
+        Action:
+          - ssm:GetParameter
+        Resource: "*" # TODO
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem
+        Resource: { Fn::ImportValue: "UserInfoTableArn-${self:provider.stage}" }
+  ListPurchases:
+    handler: ListPurchases.handler
+    layers:
+      - { Fn::ImportValue: "SequelizeLambdaLayer-${self:provider.stage}" }
+    vpc:
+      securityGroupIds:
+        - { Fn::ImportValue: "SQLSecurityGroupId-${self:provider.stage}" }
+      subnetIds:
+        - { Fn::ImportValue: "SQLSubnetId-${self:provider.stage}" }
+    events:
+      - http:
+          path: listPurchases
+          method: get
+          cors: true
+  DeleteUserEndpoints:
+    handler: DeleteUserEndpoints.handler
+    events:
+      - http:
+          path: deleteUserEndpoints
+          method: get
+          authorizer:
+            name: authorizer
+            arn: "${ssm:PublicUserPoolArn-${self:provider.stage}}"
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - mobiletargeting:DeleteUserEndpoints
+        Resource: "*" # TODO
+
+resources:
+  Resources:
+    SystemStatusSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: SystemStatus-${self:provider.stage}
+        Type: String
+        Value: "up"
+    MinApiSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: MinApi-${self:provider.stage}
+        Type: String
+        Value: "1"
+
+  Outputs:
+    ComputeRESTEndpoint:
+      Value:
+        Ref: ApiGatewayRestApi
+      Export:
+        Name: "ComputeRESTEndpoint-${self:provider.stage}"
+    CreateCourtLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateCourtLambdaFunction, Arn]
+      Export:
+        Name: "CreateCourtLambdaArn-${self:provider.stage}"
+    JoinCourtLambdaArn:
+      Value:
+        Fn::GetAtt: [JoinCourtLambdaFunction, Arn]
+      Export:
+        Name: "JoinCourtLambdaArn-${self:provider.stage}"
+    RequestToJoinCourtLambdaArn:
+      Value:
+        Fn::GetAtt: [RequestToJoinCourtLambdaFunction, Arn]
+      Export:
+        Name: "RequestToJoinCourtLambdaArn-${self:provider.stage}"
+    AcceptCourtMembershipRequestLambdaArn:
+      Value:
+        Fn::GetAtt: [AcceptCourtMembershipRequestLambdaFunction, Arn]
+      Export:
+        Name: "AcceptCourtMembershipRequestLambdaArn-${self:provider.stage}"
+    DeclineCourtMembershipRequestLambdaArn:
+      Value:
+        Fn::GetAtt: [DeclineCourtMembershipRequestLambdaFunction, Arn]
+      Export:
+        Name: "DeclineCourtMembershipRequestLambdaArn-${self:provider.stage}"
+    CreatePostLambdaArn:
+      Value:
+        Fn::GetAtt: [CreatePostLambdaFunction, Arn]
+      Export:
+        Name: "CreatePostLambdaArn-${self:provider.stage}"
+    CreateBounzLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateBounzLambdaFunction, Arn]
+      Export:
+        Name: "CreateBounzLambdaArn-${self:provider.stage}"
+    UpdateProfilePicLambdaArn:
+      Value:
+        Fn::GetAtt: [UpdateProfilePicLambdaFunction, Arn]
+      Export:
+        Name: "UpdateProfilePicLambdaArn-${self:provider.stage}"
+    UpdateCourtPicLambdaArn:
+      Value:
+        Fn::GetAtt: [UpdateCourtPicLambdaFunction, Arn]
+      Export:
+        Name: "UpdateCourtPicLambdaArn-${self:provider.stage}"
+    CreateCommentLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateCommentLambdaFunction, Arn]
+      Export:
+        Name: "CreateCommentLambdaArn-${self:provider.stage}"
+    DeleteCommentLambdaArn:
+      Value:
+        Fn::GetAtt: [DeleteCommentLambdaFunction, Arn]
+      Export:
+        Name: "DeleteCommentLambdaArn-${self:provider.stage}"
+    CreateMessageLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateMessageLambdaFunction, Arn]
+      Export:
+        Name: "CreateMessageLambdaArn-${self:provider.stage}"
+    DeleteMessageLambdaArn:
+      Value:
+        Fn::GetAtt: [DeleteMessageLambdaFunction, Arn]
+      Export:
+        Name: "DeleteMessageLambdaArn-${self:provider.stage}"
+    CreateUserInfoLambdaArn:
+      Value:
+        Fn::GetAtt: [CreateUserInfoLambdaFunction, Arn]
+      Export:
+        Name: "CreateUserInfoLambdaArn-${self:provider.stage}"
+    UpdateUsernameLambdaArn:
+      Value:
+        Fn::GetAtt: [UpdateUsernameLambdaFunction, Arn]
+      Export:
+        Name: "UpdateUsernameLambdaArn-${self:provider.stage}"
+    UpdateMessageReadLambdaArn:
+      Value:
+        Fn::GetAtt: [UpdateMessageReadLambdaFunction, Arn]
+      Export:
+        Name: "UpdateMessageReadLambdaArn-${self:provider.stage}"    
+    UpdateUserRealNameLambdaArn:
+      Value:
+        Fn::GetAtt: [UpdateUserRealNameLambdaFunction, Arn]
+      Export:
+        Name: "UpdateUserRealNameLambdaArn-${self:provider.stage}"
+    GetUserInfoLambdaArn:
+      Value:
+        Fn::GetAtt: [GetUserInfoLambdaFunction, Arn]
+      Export:
+        Name: "GetUserInfoLambdaArn-${self:provider.stage}"
+    GetUserRealNameLambdaArn:
+      Value:
+        Fn::GetAtt: [GetUserRealNameLambdaFunction, Arn]
+      Export:
+        Name: "GetUserRealNameLambdaArn-${self:provider.stage}"
+    GetUserRealName2LambdaArn:
+      Value:
+        Fn::GetAtt: [GetUserRealName2LambdaFunction, Arn]
+      Export:
+        Name: "GetUserRealName2LambdaArn-${self:provider.stage}"
+    AttachBountyToPostLambdaArn:
+      Value:
+        Fn::GetAtt: [AttachBountyToPostLambdaFunction, Arn]
+      Export:
+        Name: "AttachBountyToPostLambdaArn-${self:provider.stage}"  

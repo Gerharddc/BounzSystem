@@ -1,0 +1,17 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "Query",
+    "query" : {
+        ## Provide a query expression. **
+        "expression": "postId = :i",
+        "expressionValues" : {
+            ":i" : {
+                "S" : "${ctx.args.postId}"
+            }
+        }
+    },
+    "scanIndexForward" : false,
+    ## Add 'limit' and 'nextToken' arguments to this field in your schema to implement pagination. **
+    "limit": $util.defaultIfNull(${ctx.args.limit}, 20),
+    "nextToken": $util.toJson($util.defaultIfNullOrBlank($ctx.args.nextToken, null))
+}

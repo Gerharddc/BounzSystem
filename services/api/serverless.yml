@@ -1,0 +1,732 @@
+service: api
+
+plugins:
+  - serverless-appsync-plugin
+  - serverless-pseudo-parameters
+  - serverless-plugin-split-stacks
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+  apiname: "${self:service.name}-${self:provider.stage}"
+
+custom:
+  splitStacks:
+    perFunction: false
+    perType: false
+
+  appSync:
+    name: ${self:provider.apiname}
+    authenticationType: AMAZON_COGNITO_USER_POOLS
+    userPoolConfig:
+      awsRegion: us-east-1
+      defaultAction: ALLOW # TODO: change to deny + IAM role shit
+      userPoolId: "${ssm:PublicUserPoolId-${self:provider.stage}}"
+    dataSources:
+      - type: AMAZON_DYNAMODB
+        name: BlockedUsers
+        config:
+          tableName: { Fn::ImportValue: "BlockedUsersTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: Bounzes
+        config:
+          tableName: { Fn::ImportValue: "BounzesTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: Comments
+        config:
+          tableName: { Fn::ImportValue: "CommentsTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: Messages
+        config:
+          tableName: { Fn::ImportValue: "MessagesTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: ContentReports
+        config:
+          tableName: { Fn::ImportValue: "ContentReportsTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: CourtInfo
+        config:
+          tableName: { Fn::ImportValue: "CourtInfoTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: MessageThreads
+        config:
+          tableName: { Fn::ImportValue: "MessageThreadsTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: CourtMembers
+        config:
+          tableName: { Fn::ImportValue: "CourtMembersTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: CourtMembershipRequests
+        config:
+          tableName: { Fn::ImportValue: "CourtMembershipRequestsTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: Followers
+        config:
+          tableName: { Fn::ImportValue: "FollowersTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: ReceivedPosts
+        config:
+          tableName: { Fn::ImportValue: "ReceivedPostsTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: SentPosts
+        config:
+          tableName: { Fn::ImportValue: "SentPostsTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: UserInfo
+        config:
+          tableName: { Fn::ImportValue: "UserInfoTableName-${self:provider.stage}" }
+      - type: AMAZON_DYNAMODB
+        name: IgnoredCourts
+        config:
+          tableName: { Fn::ImportValue: "IgnoredCourtsTableName-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: AcceptCourtMembershipRequest
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "AcceptCourtMembershipRequestLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: CreateCourt
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateCourtLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: CreatePost
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreatePostLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: DeclineCourtMembershipRequest
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "DeclineCourtMembershipRequestLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: JoinCourt
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "JoinCourtLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: RequestToJoinCourt
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "RequestToJoinCourtLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: CreateBounz
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateBounzLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: CreateComment
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateCommentLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: DeleteComment
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "DeleteCommentLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: CreateMessage
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateMessageLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: DeleteMessage
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "DeleteMessageLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: UpdateProfilePic
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "UpdateProfilePicLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: UpdateCourtPic
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "UpdateCourtPicLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: CreateUserInfo
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateUserInfoLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: UpdateUsername
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "UpdateUsernameLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: UpdateUserRealName
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "UpdateUserRealNameLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: GetUserInfo
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "GetUserInfoLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: GetUserRealName
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "GetUserRealNameLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: GetUserRealName2
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "GetUserRealName2LambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: ListEventResponses
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "ListEventResponsesLambdaArn-${self:provider.stage}" }  
+      - type: AWS_LAMBDA
+        name: ListUserEvents
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "ListUserEventsLambdaArn-${self:provider.stage}" }  
+      - type: AWS_LAMBDA
+        name: ListUserInvitedEvents
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "ListUserInvitedEventsLambdaArn-${self:provider.stage}" } 
+      - type: AWS_LAMBDA
+        name: UpdateInviteeId
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "UpdateInviteeIdLambdaArn-${self:provider.stage}" } 
+      - type: AWS_LAMBDA
+        name: UpdateMessageRead
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "UpdateMessageReadLambdaArn-${self:provider.stage}" }                           
+      - type: AWS_LAMBDA
+        name: AttachBountyToPost
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "AttachBountyToPostLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: CreateInvite
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateInviteLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: DeleteInvite
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "DeleteInviteLambdaArn-${self:provider.stage}" }    
+      - type: AWS_LAMBDA
+        name: CreateInviteResponse
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateInviteResponseLambdaArn-${self:provider.stage}" }   
+      - type: AWS_LAMBDA
+        name: GetInviteInfo
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "GetInviteInfoLambdaArn-${self:provider.stage}" }  
+      - type: AWS_LAMBDA
+        name: GetEventInfo
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "GetEventInfoLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: GetInviteResponseInfo
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "GetInviteResponseInfoLambdaArn-${self:provider.stage}" }                
+      - type: AWS_LAMBDA
+        name: CreateEvent
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "CreateEventLambdaArn-${self:provider.stage}" }
+      - type: AWS_LAMBDA
+        name: DeleteEvent
+        config:
+          lambdaFunctionArn: { Fn::ImportValue: "DeleteEventLambdaArn-${self:provider.stage}" }              
+      - type: AMAZON_ELASTICSEARCH
+        name: ElasticSearch
+        config:
+          endpoint: ${cf:search-${self:provider.stage}.ElasticSearchUrl}
+          iamRoleStatements:
+            - Effect: Allow
+              Action:
+                - es:*
+              Resource:
+                Fn::Join:
+                  - ""
+                  - - { Fn::ImportValue: "ElasticSearchARN-${self:provider.stage}" }
+                    - "/*"
+    mappingTemplates:
+      - dataSource: BlockedUsers
+        type: Mutation
+        field: blockUser
+        request: "blockUser-request.vtl"
+        response: "blockUser-response.vtl"
+      - dataSource: UpdateInviteeId
+        type: Mutation
+        field: updateInviteeId
+        request: "updateInviteeId-request.vtl"
+        response: "updateInviteeId-response.vtl"  
+      - dataSource: SentPosts
+        type: Mutation
+        field: deleteSentPost
+        request: "deleteSentPost-request.vtl"
+        response: "deleteSentPost-response.vtl"
+      - dataSource: CreatePost
+        type: Mutation
+        field: createPost
+        request: "createPost-request.vtl"
+        response: "createPost-response.vtl"
+      - dataSource: SentPosts
+        type: Mutation
+        field: incrementSentPostBounzes
+        request: "incrementSentPostBounzes-request.vtl"
+        response: "incrementSentPostBounzes-response.vtl"
+      - dataSource: SentPosts
+        type: Mutation
+        field: incrementSentPostReceipts
+        request: "incrementSentPostReceipts-request.vtl"
+        response: "incrementSentPostReceipts-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: updateUserInfo
+        request: "updateUserInfo-request.vtl"
+        response: "updateUserInfo-response.vtl"
+      - dataSource: UpdateProfilePic
+        type: Mutation
+        field: updateProfilePic
+        request: "updateProfilePic-request.vtl"
+        response: "updateProfilePic-response.vtl"
+      - dataSource: UpdateCourtPic
+        type: Mutation
+        field: updateCourtPic
+        request: "updateCourtPic-request.vtl"
+        response: "updateCourtPic-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: deleteUserInfo
+        request: "deleteUserInfo-request.vtl"
+        response: "deleteUserInfo-response.vtl"
+      - dataSource: ReceivedPosts
+        type: Mutation
+        field: createReceivedPost
+        request: "createReceivedPost-request.vtl"
+        response: "createReceivedPost-response.vtl"
+      - dataSource: ReceivedPosts
+        type: Mutation
+        field: deleteReceivedPost
+        request: "deleteReceivedPost-request.vtl"
+        response: "deleteReceivedPost-response.vtl"
+      - dataSource: Followers
+        type: Mutation
+        field: createFollower
+        request: "createFollower-request.vtl"
+        response: "createFollower-response.vtl"
+      - dataSource: Followers
+        type: Mutation
+        field: deleteFollower
+        request: "deleteFollower-request.vtl"
+        response: "deleteFollower-response.vtl"
+      - dataSource: CreateComment
+        type: Mutation
+        field: createComment
+        request: "createComment-request.vtl"
+        response: "createComment-response.vtl"
+      - dataSource: DeleteComment
+        type: Mutation
+        field: deleteComment
+        request: "deleteComment-request.vtl"
+        response: "deleteComment-response.vtl"
+      - dataSource: CreateMessage
+        type: Mutation
+        field: createMessage
+        request: "createMessage-request.vtl"
+        response: "createMessage-response.vtl"
+      - dataSource: CreateInvite
+        type: Mutation
+        field: createInvite
+        request: "createInvite-request.vtl"
+        response: "createInvite-response.vtl"
+      - dataSource: DeleteInvite
+        type: Mutation
+        field: deleteInvite
+        request: "deleteInvite-request.vtl"
+        response: "deleteInvite-response.vtl"  
+      - dataSource: CreateInviteResponse
+        type: Mutation
+        field: createInviteResponse
+        request: "createInviteResponse-request.vtl"
+        response: "createInviteResponse-response.vtl"  
+      - dataSource: CreateEvent
+        type: Mutation
+        field: createEvent
+        request: "createEvent-request.vtl"
+        response: "createEvent-response.vtl" 
+      - dataSource: DeleteEvent
+        type: Mutation
+        field: deleteEvent
+        request: "deleteEvent-request.vtl"
+        response: "deleteEvent-response.vtl"   
+      - dataSource: DeleteMessage
+        type: Mutation
+        field: deleteMessage
+        request: "deleteMessage-request.vtl"
+        response: "deleteMessage-response.vtl"
+      - dataSource: CreateBounz
+        type: Mutation
+        field: createBounz
+        request: "createBounz-request.vtl"
+        response: "createBounz-response.vtl"
+      - dataSource: Bounzes
+        type: Mutation
+        field: deleteBounz
+        request: "deleteBounz-request.vtl"
+        response: "deleteBounz-response.vtl"
+      - dataSource: BlockedUsers
+        type: Mutation
+        field: unblockUser
+        request: "unblockUser-request.vtl"
+        response: "unblockUser-response.vtl"
+      - dataSource: ContentReports
+        type: Mutation
+        field: createContentReport
+        request: "createContentReport-request.vtl"
+        response: "createContentReport-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementUserBounzesMade
+        request: "incrementUserBounzesMade-request.vtl"
+        response: "incrementUserBounzesMade-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementUserBounzesReceived
+        request: "incrementUserBounzesReceived-request.vtl"
+        response: "incrementUserBounzesReceived-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementCourtsJoined
+        request: "incrementCourtsJoined-request.vtl"
+        response: "incrementCourtsJoined-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementCourtsOwned
+        request: "incrementCourtsOwned-request.vtl"
+        response: "incrementCourtsOwned-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementUserFollowingCount
+        request: "incrementUserFollowingCount-request.vtl"
+        response: "incrementUserFollowingCount-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementUserFollowersCount
+        request: "incrementUserFollowersCount-request.vtl"
+        response: "incrementUserFollowersCount-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementUserPostCount
+        request: "incrementUserPostCount-request.vtl"
+        response: "incrementUserPostCount-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementUserReceipts
+        request: "incrementUserReceipts-request.vtl"
+        response: "incrementUserReceipts-response.vtl"
+      - dataSource: CourtInfo
+        type: Mutation
+        field: incrementCourtMembers
+        request: "incrementCourtMembers-request.vtl"
+        response: "incrementCourtMembers-response.vtl"
+      - dataSource: CourtInfo
+        type: Mutation
+        field: incrementCourtPostCount
+        request: "incrementCourtPostCount-request.vtl"
+        response: "incrementCourtPostCount-response.vtl"
+      - dataSource: SentPosts
+        type: Mutation
+        field: incrementSentPostBounty
+        request: "incrementSentPostBounty-request.vtl"
+        response: "incrementSentPostBounty-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: incrementUserBounty
+        request: "incrementUserBounty-request.vtl"
+        response: "incrementUserBounty-response.vtl"
+      - dataSource: CreateCourt
+        type: Mutation
+        field: createCourt
+        request: "createCourt-request.vtl"
+        response: "createCourt-response.vtl"
+      - dataSource: CourtInfo
+        type: Mutation
+        field: deleteCourt
+        request: "deleteCourt-request.vtl"
+        response: "deleteCourt-response.vtl"
+      - dataSource: CourtInfo
+        type: Mutation
+        field: updateCourtInfo
+        request: "updateCourtInfo-request.vtl"
+        response: "updateCourtInfo-response.vtl"
+      - dataSource: JoinCourt
+        type: Mutation
+        field: joinCourt
+        request: "joinCourt-request.vtl"
+        response: "joinCourt-response.vtl"
+      - dataSource: CourtMembers
+        type: Mutation
+        field: leaveCourt
+        request: "leaveCourt-request.vtl"
+        response: "leaveCourt-response.vtl"
+      - dataSource: RequestToJoinCourt
+        type: Mutation
+        field: requestToJoinCourt
+        request: "requestToJoinCourt-request.vtl"
+        response: "requestToJoinCourt-response.vtl"
+      - dataSource: AcceptCourtMembershipRequest
+        type: Mutation
+        field: acceptCourtMembershipRequest
+        request: "acceptCourtMembershipRequest-request.vtl"
+        response: "acceptCourtMembershipRequest-response.vtl"
+      - dataSource: DeclineCourtMembershipRequest
+        type: Mutation
+        field: declineCourtMembershipRequest
+        request: "declineCourtMembershipRequest-request.vtl"
+        response: "declineCourtMembershipRequest-response.vtl"
+      - dataSource: CreateUserInfo
+        type: Mutation
+        field: createUserInfo
+        request: "createUserInfo-request.vtl"
+        response: "createUserInfo-response.vtl"
+      - dataSource: UpdateUsername
+        type: Mutation
+        field: updateUsername
+        request: "updateUsername-request.vtl"
+        response: "updateUsername-response.vtl"
+      - dataSource: UpdateMessageRead
+        type: Mutation
+        field: updateMessageRead
+        request: "updateMessageRead-request.vtl"
+        response: "updateMessageRead-response.vtl"  
+      - dataSource: UpdateMessageRead
+        type: Mutation
+        field: updateUserRealName
+        request: "updateUserRealName-request.vtl"
+        response: "updateUserRealName-response.vtl"
+      - dataSource: ContentReports
+        type: Mutation
+        field: adminDeleteContentReport
+        request: "adminDeleteContentReport-request.vtl"
+        response: "adminDeleteContentReport-response.vtl"
+      - dataSource: SentPosts
+        type: Mutation
+        field: adminDeleteSentPost
+        request: "adminDeleteSentPost-request.vtl"
+        response: "adminDeleteSentPost-response.vtl"
+      - dataSource: Comments
+        type: Mutation
+        field: adminDeleteComment
+        request: "adminDeleteComment-request.vtl"
+        response: "adminDeleteComment-response.vtl"
+      - dataSource: UserInfo
+        type: Mutation
+        field: adminDeleteUser
+        request: "adminDeleteUser-request.vtl"
+        response: "adminDeleteUser-response.vtl"
+      - dataSource: CourtInfo
+        type: Mutation
+        field: adminDeleteCourt
+        request: "adminDeleteCourt-request.vtl"
+        response: "adminDeleteCourt-response.vtl"
+      - dataSource: Messages
+        type: Mutation
+        field: adminDeleteMessage
+        request: "adminDeleteMessage-request.vtl"
+        response: "adminDeleteMessage-response.vtl"
+      - dataSource: IgnoredCourts
+        type: Mutation
+        field: ignoreCourt
+        request: "ignoreCourt-request.vtl"
+        response: "ignoreCourt-response.vtl"
+      - dataSource: IgnoredCourts
+        type: Mutation
+        field: unignoreCourt
+        request: "unignoreCourt-request.vtl"
+        response: "unignoreCourt-response.vtl"
+      - dataSource: AttachBountyToPost
+        type: Mutation
+        field: attachBountyToPost
+        request: "attachBountyToPost-request.vtl"
+        response: "attachBountyToPost-response.vtl"
+      - dataSource: Bounzes
+        type: Query
+        field: getBounz
+        request: "getBounz-request.vtl"
+        response: "getBounz-response.vtl"
+      - dataSource: SentPosts
+        type: Query
+        field: getSentPost
+        request: "getSentPost-request.vtl"
+        response: "getSentPost-response.vtl"
+      - dataSource: SentPosts
+        type: Query
+        field: listUserSentPosts
+        request: "listUserSentPosts-request.vtl"
+        response: "listUserSentPosts-response.vtl"
+      - dataSource: GetUserInfo
+        type: Query
+        field: getUserInfo
+        request: "getUserInfo-request.vtl"
+        response: "getUserInfo-response.vtl"
+      - dataSource: GetInviteInfo
+        type: Query
+        field: getInviteInfo
+        request: "getInviteInfo-request.vtl"
+        response: "getInviteInfo-response.vtl" 
+      - dataSource: GetEventInfo
+        type: Query
+        field: getEventInfo
+        request: "getEventInfo-request.vtl"
+        response: "getEventInfo-response.vtl"   
+      - dataSource: GetInviteResponseInfo
+        type: Query
+        field: getInviteResponseInfo
+        request: "getInviteResponseInfo-request.vtl"
+        response: "getInviteResponseInfo-response.vtl"     
+      - dataSource: ListEventResponses
+        type: Query
+        field: listEventResponses
+        request: "listEventResponses-request.vtl"
+        response: "listEventResponses-response.vtl"  
+      - dataSource: ListUserEvents
+        type: Query
+        field: listUserEvents
+        request: "listUserEvents-request.vtl"
+        response: "listUserEvents-response.vtl"
+      - dataSource: ListUserInvitedEvents
+        type: Query
+        field: listUserInvitedEvents
+        request: "listUserInvitedEvents-request.vtl"
+        response: "listUserInvitedEvents-response.vtl"       
+      - dataSource: GetUserRealName
+        type: Query
+        field: getUserRealName
+        request: "getUserRealName-request.vtl"
+        response: "getUserRealName-response.vtl"
+      - dataSource: GetUserRealName2
+        type: Query
+        field: getUserRealName2
+        request: "getUserRealName2-request.vtl"
+        response: "getUserRealName2-response.vtl"
+      - dataSource: UserInfo
+        type: Query
+        field: getUserBounty
+        request: "getUserBounty-request.vtl"
+        response: "getUserBounty-response.vtl"
+      - dataSource: Comments
+        type: Query
+        field: getComment
+        request: "getComment-request.vtl"
+        response: "getComment-response.vtl"
+      - dataSource: Messages
+        type: Query
+        field: getMessage
+        request: "getMessage-request.vtl"
+        response: "getMessage-response.vtl"
+      - dataSource: UserInfo
+        type: Query
+        field: getUserId
+        request: "getUserId-request.vtl"
+        response: "getUserId-response.vtl"
+      - dataSource: ReceivedPosts
+        type: Query
+        field: listUserReceivedPosts
+        request: "listUserReceivedPosts-request.vtl"
+        response: "listUserReceivedPosts-response.vtl"
+      - dataSource: MessageThreads
+        type: Query
+        field: listUserThreads
+        request: "listUserThreads-request.vtl"
+        response: "listUserThreads-response.vtl"
+      - dataSource: Followers
+        type: Query
+        field: listFollowers
+        request: "listFollowers-request.vtl"
+        response: "listFollowers-response.vtl"
+      - dataSource: Followers
+        type: Query
+        field: listFollowing
+        request: "listFollowing-request.vtl"
+        response: "listFollowing-response.vtl"
+      - dataSource: Comments
+        type: Query
+        field: listPostComments
+        request: "listPostComments-request.vtl"
+        response: "listPostComments-response.vtl"
+      - dataSource: Messages
+        type: Query
+        field: listThreadMessages
+        request: "listThreadMessages-request.vtl"
+        response: "listThreadMessages-response.vtl"
+      - dataSource: Bounzes
+        type: Query
+        field: listPostBounzes
+        request: "listPostBounzes-request.vtl"
+        response: "listPostBounzes-response.vtl"
+      - dataSource: Bounzes
+        type: Query
+        field: listUserBounzes
+        request: "listUserBounzes-request.vtl"
+        response: "listUserBounzes-response.vtl"
+      - dataSource: BlockedUsers
+        type: Query
+        field: getBlockedUser
+        request: "getBlockedUser-request.vtl"
+        response: "getBlockedUser-response.vtl"
+      - dataSource: ElasticSearch
+        type: Query
+        field: searchUsers
+        request: "searchUsers-request.vtl"
+        response: "searchUsers-response.vtl"
+      - dataSource: ElasticSearch
+        type: Query
+        field: searchCourts
+        request: "searchCourts-request.vtl"
+        response: "searchCourts-response.vtl"
+      - dataSource: CourtMembers
+        type: Query
+        field: listCourtMembers
+        request: "listCourtMembers-request.vtl"
+        response: "listCourtMembers-response.vtl"
+      - dataSource: SentPosts
+        type: Query
+        field: listCourtPosts
+        request: "listCourtPosts-request.vtl"
+        response: "listCourtPosts-response.vtl"
+      - dataSource: CourtMembers
+        type: Query
+        field: listMemberCourts
+        request: "listMemberCourts-request.vtl"
+        response: "listMemberCourts-response.vtl"
+      - dataSource: CourtInfo
+        type: Query
+        field: listOwnerCourts
+        request: "listOwnerCourts-request.vtl"
+        response: "listOwnerCourts-response.vtl"
+      - dataSource: CourtInfo
+        type: Query
+        field: listCourtInfos
+        request: "listCourtInfos-request.vtl"
+        response: "listCourtInfos-response.vtl"
+      - dataSource: CourtInfo
+        type: Query
+        field: getCourtInfo
+        request: "getCourtInfo-request.vtl"
+        response: "getCourtInfo-response.vtl"
+      - dataSource: Followers
+        type: Query
+        field: getFollower
+        request: "getFollower-request.vtl"
+        response: "getFollower-response.vtl"
+      - dataSource: CourtMembers
+        type: Query
+        field: getCourtMember
+        request: "getCourtMember-request.vtl"
+        response: "getCourtMember-response.vtl"
+      - dataSource: CourtMembershipRequests
+        type: Query
+        field: getCourtMembershipRequest
+        request: "getCourtMembershipRequest-request.vtl"
+        response: "getCourtMembershipRequest-response.vtl"
+      - dataSource: CourtMembershipRequests
+        type: Query
+        field: listCourtMembershipRequests
+        request: "listCourtMembershipRequests-request.vtl"
+        response: "listCourtMembershipRequests-response.vtl"
+      - dataSource: ContentReports
+        type: Query
+        field: listContentReports
+        request: "listContentReports-request.vtl"
+        response: "listContentReports-response.vtl"
+      - dataSource: IgnoredCourts
+        type: Query
+        field: getIgnoredCourt
+        request: "getIgnoredCourt-request.vtl"
+        response: "getIgnoredCourt-response.vtl"
+
+resources:
+  Resources:
+    GraphQlApiUrlSSM:
+      Type: AWS::SSM::Parameter
+      Properties:
+        Name: GraphQlApiUrl-${self:provider.stage}
+        Type: String
+        Value: { Fn::GetAtt: [GraphQlApi, GraphQLUrl] }

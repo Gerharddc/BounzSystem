@@ -1,0 +1,15 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "Query",
+    "query" : {
+        "expression": "threadId = :i",
+        "expressionValues" : {
+            ":i" : {
+                "S" : "${ctx.args.threadId}"
+            }
+        }
+    },
+    "scanIndexForward" : false,
+    "limit": $util.defaultIfNull(${ctx.args.limit}, 20),
+    "nextToken": $util.toJson($util.defaultIfNullOrBlank($ctx.args.nextToken, null))
+}

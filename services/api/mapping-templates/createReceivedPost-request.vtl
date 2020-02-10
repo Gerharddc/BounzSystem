@@ -1,0 +1,17 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "PutItem",
+    "key" : {
+        "receiverId": $util.dynamodb.toDynamoDBJson($ctx.args.input.receiverId),
+        "postId": $util.dynamodb.toDynamoDBJson($ctx.args.input.postId),
+    },
+    "attributeValues" : $util.dynamodb.toMapValuesJson($ctx.args.input),
+    ## This condition ensures no new records are created
+    "condition" : {
+    	"expression": "receiverId <> :r OR postId <> :p",
+        "expressionValues": {
+        	":r": $util.dynamodb.toDynamoDBJson($ctx.args.input.receiverId),
+            ":p": $util.dynamodb.toDynamoDBJson($ctx.args.input.postId),
+      	}
+    }
+}

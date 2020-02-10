@@ -1,0 +1,26 @@
+{
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.15",
+    "@types/elasticsearch": "^5.0.30",
+    "@types/node-fetch": "^2.1.4",
+    "@types/redis": "^2.8.13",
+    "@types/sharp": "^0.21.0",
+    "@types/twitter-text": "^2.0.0",
+    "@types/uuid": "^3.4.4",
+    "@types/uuid-validate": "^0.0.0"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.384.0",
+    "dynamodb-marshaler": "^2.0.0",
+    "elasticsearch": "^15.3.0",
+    "http-aws-es": "^6.0.0",
+    "is-jpg": "^2.0.0",
+    "node-fetch": "^2.3.0",
+    "node-vibrant": "^3.0.0",
+    "redis": "^2.8.0",
+    "sharp": "^0.21.1",
+    "twitter-text": "^3.0.0",
+    "uuid": "^3.3.2",
+    "uuid-validate": "^0.0.3"
+  }
+}

@@ -1,0 +1,20 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "UpdateItem",
+    "key" : {
+        "userId": $util.dynamodb.toDynamoDBJson($ctx.args.input.userId)
+    },
+    "update" : {
+    	"expression": "ADD receipts :c",
+        "expressionValues": {
+        	":c": $util.dynamodb.toDynamoDBJson($ctx.args.input.count)
+        }
+    },
+    ## This condition ensures no new records are created
+    "condition" : {
+    	"expression": "userId = :i",
+        "expressionValues": {
+        	":i": $util.dynamodb.toDynamoDBJson($ctx.args.input.userId)
+        }
+    }
+}

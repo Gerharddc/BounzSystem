@@ -1,0 +1,684 @@
+service: db
+
+plugins:
+  - serverless-dynamodb-autoscaling
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+  region: us-east-1
+
+custom:
+  capacities:
+    - table: CourtInfo
+      index:
+        - ownerId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: CourtMembers
+      index:
+        - memberId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: CourtMembershipRequests
+      index:
+        - ownerId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: Bounzes
+      index:
+        - postId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: Comments
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: Messages
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: MessageThreads
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: Followers
+      index:
+        - followeeId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: ReceivedPosts
+      index:
+        - postId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: SentPosts
+      index:
+        - courtId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: UserInfo
+      index:
+        - username_lcase-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: BlockedUsers
+      index:
+        - blockeeId-index
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+    - table: IgnoredCourts
+      read:
+        minimum: 1
+        maximum: 100
+        usage: 0.75
+      write:
+        minimum: 1
+        maximum: 50
+        usage: 0.75
+
+resources:
+  Resources:
+    CourtInfo:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: courtId
+            AttributeType: S
+          - AttributeName: ownerId
+            AttributeType: S
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: courtId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: ownerId-index
+            KeySchema:
+              - AttributeName: ownerId
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+          - IndexName: name-index
+            KeySchema:
+              - AttributeName: name
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    CourtMembers:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: courtId
+            AttributeType: S
+          - AttributeName: memberId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: courtId
+            KeyType: HASH
+          - AttributeName: memberId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: memberId-index
+            KeySchema:
+              - AttributeName: memberId
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    CourtMembershipRequests:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: courtId
+            AttributeType: S
+          - AttributeName: memberId
+            AttributeType: S
+          - AttributeName: ownerId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: courtId
+            KeyType: HASH
+          - AttributeName: memberId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: ownerId-index
+            KeySchema:
+              - AttributeName: ownerId
+                KeyType: HASH
+              - AttributeName: memberId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    ContentReports:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: contentId
+            AttributeType: S
+          - AttributeName: reporterId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: contentId
+            KeyType: HASH
+          - AttributeName: reporterId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    Bounzes:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: bounzerId
+            AttributeType: S
+          - AttributeName: postId
+            AttributeType: S
+          - AttributeName: bounzedDate
+            AttributeType: S
+        KeySchema:
+          - AttributeName: bounzerId
+            KeyType: HASH
+          - AttributeName: postId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        LocalSecondaryIndexes:
+          - IndexName: bounzedDate-index
+            KeySchema:
+              - AttributeName: bounzerId
+                KeyType: HASH
+              - AttributeName: bounzedDate
+                KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+        GlobalSecondaryIndexes:
+          - IndexName: postId-index
+            KeySchema:
+              - AttributeName: postId
+                KeyType: HASH
+              - AttributeName: bounzedDate
+                KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    Comments:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: postId
+            AttributeType: S
+          - AttributeName: commentDate
+            AttributeType: S
+        KeySchema:
+          - AttributeName: postId
+            KeyType: HASH
+          - AttributeName: commentDate
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    Messages:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: threadId
+            AttributeType: S
+          - AttributeName: messageDate
+            AttributeType: S
+        KeySchema:
+          - AttributeName: threadId
+            KeyType: HASH
+          - AttributeName: messageDate
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    MessageThreads:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: threadId
+            AttributeType: S
+          - AttributeName: latestMessageDate
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: threadId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+        GlobalSecondaryIndexes:
+          - IndexName: latestMessageDate-index
+            KeySchema:
+              - AttributeName: userId
+                KeyType: HASH
+              - AttributeName: latestMessageDate
+                KeyType: RANGE
+            Projection:
+              NonKeyAttributes:
+                - latestMessageDate
+              ProjectionType: INCLUDE
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+    Followers:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: followerId
+            AttributeType: S
+          - AttributeName: followeeId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: followerId
+            KeyType: HASH
+          - AttributeName: followeeId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: followeeId-index
+            KeySchema:
+              - AttributeName: followeeId
+                KeyType: HASH
+              - AttributeName: followerId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    ReceivedPosts:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: receiverId
+            AttributeType: S
+          - AttributeName: receivedDate
+            AttributeType: S
+          - AttributeName: postId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: receiverId
+            KeyType: HASH
+          - AttributeName: postId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        LocalSecondaryIndexes:
+          - IndexName: receivedDate-index
+            KeySchema:
+              - AttributeName: receiverId
+                KeyType: HASH
+              - AttributeName: receivedDate
+                KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+        GlobalSecondaryIndexes:
+          - IndexName: postId-index
+            KeySchema:
+              - AttributeName: postId
+                KeyType: HASH
+              - AttributeName: receiverId
+                KeyType: RANGE
+            Projection:
+              NonKeyAttributes:
+                - receivedDate
+                - creatorId
+              ProjectionType: INCLUDE
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    SentPosts:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: creatorId
+            AttributeType: S
+          - AttributeName: postedDate
+            AttributeType: S
+          - AttributeName: courtId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: creatorId
+            KeyType: HASH
+          - AttributeName: postedDate
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: courtId-index
+            KeySchema:
+              - AttributeName: courtId
+                KeyType: HASH
+              - AttributeName: postedDate
+                KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    UserInfo:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: username_lcase
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: username_lcase-index
+            KeySchema:
+              - AttributeName: username_lcase
+                KeyType: HASH
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1  
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    BlockedUsers:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: blockerId
+            AttributeType: S
+          - AttributeName: blockeeId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: blockerId
+            KeyType: HASH
+          - AttributeName: blockeeId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+          - IndexName: blockeeId-index
+            KeySchema:
+              - AttributeName: blockeeId
+                KeyType: HASH
+              - AttributeName: blockerId
+                KeyType: RANGE
+            Projection:
+              ProjectionType: KEYS_ONLY
+            ProvisionedThroughput:
+              ReadCapacityUnits: 1
+              WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+    IgnoredCourts:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: ignorerId
+            AttributeType: S
+          - AttributeName: courtId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: ignorerId
+            KeyType: HASH
+          - AttributeName: courtId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: NEW_AND_OLD_IMAGES
+
+  Outputs:
+    CourtInfoTableArn:
+      Value: { Fn::GetAtt: [CourtInfo, Arn] }
+      Export: { Name: "CourtInfoTableArn-${self:provider.stage}" }
+    CourtInfoTableStreamArn:
+      Value: { Fn::GetAtt: [CourtInfo, StreamArn] }
+      Export: { Name: "CourtInfoTableStreamArn-${self:provider.stage}" }
+    CourtInfoTableName:
+      Value: { Ref: CourtInfo }
+      Export: { Name: "CourtInfoTableName-${self:provider.stage}" }
+    CourtMembersTableArn:
+      Value: { Fn::GetAtt: [CourtMembers, Arn] }
+      Export: { Name: "CourtMembersTableArn-${self:provider.stage}" }
+    CourtMembersTableStreamArn:
+      Value: { Fn::GetAtt: [CourtMembers, StreamArn] }
+      Export: { Name: "CourtMembersTableStreamArn-${self:provider.stage}" }
+    CourtMembersTableName:
+      Value: { Ref: CourtMembers }
+      Export: { Name: "CourtMembersTableName-${self:provider.stage}" }
+    CourtMembershipRequestsTableArn:
+      Value: { Fn::GetAtt: [CourtMembershipRequests, Arn] }
+      Export: { Name: "CourtMembershipRequestsTableArn-${self:provider.stage}" }
+    CourtMembershipRequestsTableStreamArn:
+      Value: { Fn::GetAtt: [CourtMembershipRequests, StreamArn] }
+      Export: { Name: "CourtMembershipRequestsTableStreamArn-${self:provider.stage}" }
+    CourtMembershipRequestsTableName:
+      Value: { Ref: CourtMembershipRequests }
+      Export: { Name: "CourtMembershipRequestsTableName-${self:provider.stage}" }
+    ContentReportsTableArn:
+      Value: { Fn::GetAtt: [ContentReports, Arn] }
+      Export: { Name: "ContentReportsTableArn-${self:provider.stage}" }
+    ContentReportsTableStreamArn:
+      Value: { Fn::GetAtt: [ContentReports, StreamArn] }
+      Export: { Name: "ContentReportsTableStreamArn-${self:provider.stage}" }
+    ContentReportsTableName:
+      Value: { Ref: ContentReports }
+      Export: { Name: "ContentReportsTableName-${self:provider.stage}" }
+    Bounzes:
+      Value: { Fn::GetAtt: [Bounzes, Arn] }
+      Export: { Name: "BounzesTableArn-${self:provider.stage}" }
+    BounzesTableStreamArn:
+      Value: { Fn::GetAtt: [Bounzes, StreamArn] }
+      Export: { Name: "BounzesTableStreamArn-${self:provider.stage}" }
+    BounzesTableName:
+      Value: { Ref: Bounzes }
+      Export: { Name: "BounzesTableName-${self:provider.stage}" }
+    CommentsTableArn:
+      Value: { Fn::GetAtt: [Comments, Arn] }
+      Export: { Name: "CommentsTableArn-${self:provider.stage}" }
+    CommentsTableStreamArn:
+      Value: { Fn::GetAtt: [Comments, StreamArn] }
+      Export: { Name: "CommentsTableStreamArn-${self:provider.stage}" }
+    CommentsTableName:
+      Value: { Ref: Comments }
+      Export: { Name: "CommentsTableName-${self:provider.stage}" }
+    MessagesTableArn:
+      Value: { Fn::GetAtt: [Messages, Arn] }
+      Export: { Name: "MessagesTableArn-${self:provider.stage}" }
+    MessagesTableStreamArn:
+      Value: { Fn::GetAtt: [Messages, StreamArn] }
+      Export: { Name: "MessagesTableStreamArn-${self:provider.stage}" }
+    MessagesTableName:
+      Value: { Ref: Messages }
+      Export: { Name: "MessagesTableName-${self:provider.stage}" }
+    MessageThreadsTableArn:
+      Value: { Fn::GetAtt: [MessageThreads, Arn] }
+      Export: { Name: "MessageThreadsTableArn-${self:provider.stage}" }
+    MessageThreadsTableStreamArn:
+      Value: { Fn::GetAtt: [MessageThreads, StreamArn] }
+      Export: { Name: "MessageThreadsTableStreamArn-${self:provider.stage}" }
+    MessageThreadsTableName:
+      Value: { Ref: MessageThreads }
+      Export: { Name: "MessageThreadsTableName-${self:provider.stage}" }
+    FollowersTableArn:
+      Value: { Fn::GetAtt: [Followers, Arn] }
+      Export: { Name: "FollowersTableArn-${self:provider.stage}" }
+    FollowersTableStreamArn:
+      Value: { Fn::GetAtt: [Followers, StreamArn] }
+      Export: { Name: "FollowersTableStreamArn-${self:provider.stage}" }
+    FollowersTableName:
+      Value: { Ref: Followers }
+      Export: { Name: "FollowersTableName-${self:provider.stage}" }
+    ReceivedPostsTableArn:
+      Value: { Fn::GetAtt: [ReceivedPosts, Arn] }
+      Export: { Name: "ReceivedPostsTableArn-${self:provider.stage}" }
+    ReceivedPostsTableStreamArn:
+      Value: { Fn::GetAtt: [ReceivedPosts, StreamArn] }
+      Export: { Name: "ReceivedPostsTableStreamArn-${self:provider.stage}" }
+    ReceivedPostsTableName:
+      Value: { Ref: ReceivedPosts }
+      Export: { Name: "ReceivedPostsTableName-${self:provider.stage}" }
+    SentPostsTableArn:
+      Value: { Fn::GetAtt: [SentPosts, Arn] }
+      Export: { Name: "SentPostsTableArn-${self:provider.stage}" }
+    SentPostsTableStreamArn:
+      Value: { Fn::GetAtt: [SentPosts, StreamArn] }
+      Export: { Name: "SentPostsTableStreamArn-${self:provider.stage}" }
+    SentPostsTableName:
+      Value: { Ref: SentPosts }
+      Export: { Name: "SentPostsTableName-${self:provider.stage}" }
+    UserInfoTableArn:
+      Value: { Fn::GetAtt: [UserInfo, Arn] }
+      Export: { Name: "UserInfoTableArn-${self:provider.stage}" }
+    UserInfoTableStreamArn:
+      Value: { Fn::GetAtt: [UserInfo, StreamArn] }
+      Export: { Name: "UserInfoTableStreamArn-${self:provider.stage}" }
+    UserInfoTableName:
+      Value: { Ref: UserInfo }
+      Export: { Name: "UserInfoTableName-${self:provider.stage}" }
+    BlockedUsersTableArn:
+      Value: { Fn::GetAtt: [BlockedUsers, Arn] }
+      Export: { Name: "BlockedUsersTableArn-${self:provider.stage}" }
+    BlockedUsersTableStreamArn:
+      Value: { Fn::GetAtt: [BlockedUsers, StreamArn] }
+      Export: { Name: "BlockedUsersTableStreamArn-${self:provider.stage}" }
+    BlockedUsersTableName:
+      Value: { Ref: BlockedUsers }
+      Export: { Name: "BlockedUsersTableName-${self:provider.stage}" }
+    IgnoredCourtsTableArn:
+      Value: { Fn::GetAtt: [IgnoredCourts, Arn] }
+      Export: { Name: "IgnoredCourtsTableArn-${self:provider.stage}" }
+    IgnoredCourtsTableStreamArn:
+      Value: { Fn::GetAtt: [IgnoredCourts, StreamArn] }
+      Export: { Name: "IgnoredCourtsTableStreamArn-${self:provider.stage}" }
+    IgnoredCourtsTableName:
+      Value: { Ref: IgnoredCourts }
+      Export: { Name: "IgnoredCourtsTableName-${self:provider.stage}" }

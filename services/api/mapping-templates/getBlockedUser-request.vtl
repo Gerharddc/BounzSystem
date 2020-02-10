@@ -1,0 +1,12 @@
+#if(($ctx.args.blockerId != $ctx.identity.username) && ($ctx.args.blockeeId != $ctx.identity.username))
+	$util.unauthorized()
+#end
+
+{
+    "version": "2018-05-29",
+    "operation": "GetItem",
+    "key": {
+        "blockerId": $util.dynamodb.toDynamoDBJson($ctx.args.blockerId),
+        "blockeeId": $util.dynamodb.toDynamoDBJson($ctx.args.blockeeId)
+    }
+}

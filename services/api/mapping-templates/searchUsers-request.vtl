@@ -1,0 +1,20 @@
+{
+    "version": "2017-02-28",
+    "operation": "GET",
+    "path":"/userinfo/userinfo/_search",
+    "params": {
+        "body": {
+            "suggest": {
+            	"suggester": {
+					"prefix": "$ctx.args.searchTerm",
+					"completion": {
+						"field": "suggest",
+						"fuzzy": {
+							"fuzziness": 2
+						}
+					}
+				}
+            }
+        }
+    }
+}

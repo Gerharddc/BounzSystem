@@ -1,0 +1,19 @@
+service: image-layer
+
+provider:
+  name: aws
+  stage: ${opt:stage, "dev"}
+
+layers:
+  image:
+    path: layer
+    compatibleRuntimes:
+      - nodejs8.10
+
+resources:
+  Outputs:
+    ImageLayerExport:
+      Value:
+        Ref: ImageLambdaLayer
+      Export:
+        Name: "ImageLambdaLayer-${self:provider.stage}"

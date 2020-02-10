@@ -1,0 +1,622 @@
+input AttachBountyToPostInput {
+	creatorId: String!
+	postedDate: String!
+	bounty: Int!
+}
+
+type BlockedUser {
+	blocked: Boolean!
+	blockeeId: String!
+	blockerId: String!
+}
+
+type Bounz {
+	bounzedDate: String!
+	bounzerId: String!
+	postId: String!
+}
+
+input BounzInput {
+	bounzerId: String!
+	postId: String!
+}
+
+type BounzList {
+	items: [Bounz!]!
+	nextToken: String
+}
+
+type Comment {
+	comment: String!
+	commentDate: String!
+	commentorId: String!
+	postId: String!
+}
+
+type CommentList {
+	items: [Comment!]!
+	nextToken: String
+}
+
+type Message {
+	message: String!
+	messageDate: String!
+	messengerId: String!
+	threadId: String!
+	opened: Boolean
+}
+
+type MessageList {
+	items: [Message!]!
+	nextToken: String
+}
+
+type ContentReport {
+	contentId: String!
+	contentType: String!
+	description: String!
+	reportedDate: String!
+	reporterId: String!
+	title: String!
+}
+
+type ContentReportList {
+	items: [ContentReport!]
+	nextToken: String
+}
+
+type CourtInfo {
+	color: String!
+	courtId: String!
+	description: String!
+	imageRev: Int!
+	memberCount: Int!
+	name: String!
+	ownerId: String!
+	postCount: Int!
+	restricted: Boolean!
+	verified: Boolean!
+}
+
+type CourtInfoList {
+	items: [CourtInfo!]
+	nextToken: String
+}
+
+type CourtMember {
+	courtId: String!
+	memberId: String!
+}
+
+input CourtMemberInput {
+	courtId: String!
+	memberId: String!
+}
+
+type CourtMemberList {
+	items: [CourtMember!]
+	nextToken: String
+}
+
+type CourtMembershipRequest {
+	courtId: String!
+	memberId: String!
+	ownerId: String!
+}
+
+input CourtMembershipRequestInput {
+	courtId: String!
+	memberId: String!
+	ownerId: String!
+}
+
+type CourtOwner {
+	courtId: String!
+	ownerId: String!
+}
+
+input CreateCommentInput {
+	comment: String!
+	commentorId: String!
+	postId: String!
+}
+
+input CreateMessageInput {
+	message: String!
+	messengerId: String!
+	threadId: String!
+}
+
+input CreateContentReportInput {
+	contentId: String!
+	contentType: String!
+	description: String!
+	title: String!
+}
+
+input CreateCourtInfoInput {
+	color: String!
+	description: String!
+	image: S3ObjectInput!
+	name: String!
+	ownerId: String!
+	restricted: String!
+}
+
+input CreateFollowerInput {
+	followeeId: String!
+	followerId: String!
+}
+
+input CreatePostInput {
+	caption: String!
+	courtId: String
+	creatorId: String!
+	image: S3ObjectInput!
+}
+
+input CreateReceivedPostInput {
+	receiverId: String!
+	postId: String!
+	receivedDate: String!
+}
+
+input CreateUserInfoInput {
+	userId: String!
+	username: String!
+}
+
+input CreateInviteInput {
+	eventId: String!
+	inviteeId: String
+    inviteeName: String!
+	inviteeSurname: String!
+	attendanceLimit: Int!
+}
+
+input CreateInviteResponseInput {
+	inviteId: String!
+	responseType: String!
+	attendanceCount: Int!
+    comment: String!
+}
+
+input CreateEventInput {
+	title: String!
+	type: String!
+	description: String!
+    location: String!
+	ownerId: String!
+	date: String!
+	rsvpDate: String!
+}
+
+input DeleteCommentInput {
+	commentDate: String!
+	postId: String!
+	commentorId: String
+}
+
+input DeleteMessageInput {
+	messageDate: String!
+	threadId: String!
+	messengerId: String
+}
+
+input DeleteContentReportInput {
+	contentId: String!
+	reporterId: String!
+}
+
+input DeleteFollowerInput {
+	followeeId: String!
+	followerId: String!
+}
+
+input DeleteReceivedPostInput {
+	receiverId: String!
+	receivedDate: String!
+}
+
+input DeleteSentPostInput {
+	creatorId: String!
+	postedDate: String!
+}
+
+input DeleteUserInfoInput {
+	userId: String!
+}
+
+type Follower {
+	followeeId: String!
+	followerId: String!
+}
+
+input FollowerInput {
+	followeeId: String!
+	followerId: String!
+}
+
+type FollowerList {
+	items: [Follower!]!
+	nextToken: String
+}
+
+type IgnoredCourt {
+	ignorerId: String!
+	courtId: String!
+}
+
+input IncrementCourtPropInput {
+	count: Int!
+	courtId: String!
+}
+
+input IncrementSentPostPropInput {
+	count: Int!
+	creatorId: String!
+	postedDate: String!
+}
+
+input IncrementUserPropInput {
+	count: Int!
+	userId: String!
+}
+
+type Invite {
+	inviteId: String!
+    eventId: String!
+    inviteeId: String
+    inviteeName: String!
+	inviteeSurname: String!
+    attendanceLimit: Int!
+}
+
+type InviteInfo {
+	event: Event!, 
+	invite: Invite!,
+}
+
+type InviteResponse {
+	responseId: String!
+	inviteId: String!
+	responseType: String!
+	attendanceCount: Int!
+    comment: String!
+}
+
+type RespondedInvite {
+	response: InviteResponse,
+	invite: Invite!,
+}
+
+type ResponseList {
+	items: [RespondedInvite!]!
+	nextToken: String
+}
+
+type Event {
+	eventId: String!
+	title: String!
+	type: String!
+	description: String!
+    location: String!
+	ownerId: String!
+	date: String!
+	rsvpDate: String!
+}
+
+type EventList {
+	items: [Event!]!
+	nextToken: String
+}
+
+type InvitedEventsList {
+	items: [InvitedEvent!]!
+	nextToken: String
+}
+
+type InvitedEvent {
+	response: InviteResponse,
+	event: Event!,
+	invite: Invite!,
+}
+
+type Mutation {
+	acceptCourtMembershipRequest(input: CourtMembershipRequestInput!): CourtMember
+	blockUser(blockeeId: String!, blockerId: String!): BlockedUser
+	createBounz(input: BounzInput!): Bounz
+	createComment(input: CreateCommentInput!): Comment
+	createMessage(input: CreateMessageInput!): Message
+	createContentReport(input: CreateContentReportInput!): ContentReport
+	createCourt(input: CreateCourtInfoInput!): CourtInfo
+	createFollower(input: FollowerInput!): Follower
+	createPost(input: CreatePostInput!): SentPost
+	createReceivedPost(input: CreateReceivedPostInput!): ReceivedPost
+		@aws_auth(cognito_groups: ["System"])
+	createUserInfo(input: CreateUserInfoInput!): UserInfo
+	createInvite(input: CreateInviteInput!): Invite
+	createInviteResponse(input: CreateInviteResponseInput!): InviteResponse
+	createEvent(input: CreateEventInput!): Event
+	declineCourtMembershipRequest(input: CourtMembershipRequestInput!): CourtMembershipRequest
+	deleteBounz(input: BounzInput!): Bounz
+	deleteComment(input: DeleteCommentInput!): Comment
+	deleteMessage(input: DeleteMessageInput!): Message
+	deleteCourt(courtId: String!): CourtInfo
+	deleteEvent(eventId: String!) : Event
+	deleteFollower(input: FollowerInput!): Follower
+	deleteInvite(inviteId: String!) : Invite
+	deleteReceivedPost(input: DeleteReceivedPostInput!): ReceivedPost
+		@aws_auth(cognito_groups: ["System"])
+	deleteSentPost(input: DeleteSentPostInput!): SentPost
+	deleteUserInfo(input: DeleteUserInfoInput!): UserInfo
+	incrementCourtMembers(input: IncrementCourtPropInput!): CourtInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementCourtPostCount(input: IncrementCourtPropInput!): CourtInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementSentPostBounzes(input: IncrementSentPostPropInput!): SentPost
+		@aws_auth(cognito_groups: ["System"])
+	incrementSentPostReceipts(input: IncrementSentPostPropInput!): SentPost
+		@aws_auth(cognito_groups: ["System"])
+	incrementSentPostBounty(input: IncrementSentPostPropInput!): SentPost
+		@aws_auth(cognito_groups: ["System"])
+	incrementUserBounzesMade(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementUserBounzesReceived(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementUserFollowersCount(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementUserFollowingCount(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementUserPostCount(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementCourtsJoined(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementCourtsOwned(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])		
+	incrementUserReceipts(input: IncrementUserPropInput!): UserInfo
+		@aws_auth(cognito_groups: ["System"])
+	incrementUserBounty(input: IncrementUserPropInput!): UserBounty
+		@aws_auth(cognito_groups: ["System"])
+	joinCourt(input: CourtMemberInput!): CourtMember
+	leaveCourt(input: CourtMemberInput!): CourtMember
+	requestToJoinCourt(input: CourtMemberInput!): CourtMembershipRequest
+	unblockUser(blockeeId: String!, blockerId: String!): BlockedUser
+	updateCourtInfo(input: UpdateCourtInfoInput!): CourtInfo
+	updateInviteeId(inviteId: String!, inviteeId: String!): Invite
+	updateProfilePic(input: UpdateProfilePicInput!): UserInfo
+	updateUserInfo(input: UpdateUserInfoInput!): UserInfo
+	updateCourtPic(input: UpdateCourtPicInput!): CourtInfo
+	updateUsername(input: UpdateUsernameInput!): UserInfo
+	updateMessageRead(threadId: String!, messageDate: String!): Message
+	updateUserRealName(input: UpdateUserRealNameInput!): String
+	ignoreCourt(ignorerId: String!, courtId: String!): IgnoredCourt
+	unignoreCourt(ignorerId: String!, courtId: String!): IgnoredCourt
+	attachBountyToPost(input: AttachBountyToPostInput): SentPost
+	adminDeleteContentReport(input: DeleteContentReportInput!): ContentReport
+		@aws_auth(cognito_groups: ["Admin"])
+	adminDeleteSentPost(input: DeleteSentPostInput!): SentPost
+		@aws_auth(cognito_groups: ["Admin"])
+	adminDeleteComment(input: DeleteCommentInput!): Comment
+		@aws_auth(cognito_groups: ["Admin"])
+	adminDeleteUser(userId: String!): UserInfo
+		@aws_auth(cognito_groups: ["Admin"])
+	adminDeleteCourt(courtId: String!): CourtInfo
+		@aws_auth(cognito_groups: ["Admin"])
+	adminDeleteMessage(input: DeleteMessageInput!): Message
+		@aws_auth(cognito_groups: ["Admin"])
+}
+
+type OwnerCourtList {
+	items: [CourtOwner!]
+	nextToken: String
+}
+
+type Thread{
+	threadId: String!
+	userId: String!
+	latestMessageDate: String!
+}
+
+type ThreadsList{
+	items: [Thread!]
+	nextToken: String
+}
+
+type Query {
+	getBlockedUser(blockeeId: String!, blockerId: String!): BlockedUser
+	getBounz(bounzerId: String!, postId: String!): Bounz
+	getCourtInfo(courtId: String!): CourtInfo
+	getCourtMember(courtId: String!, memberId: String!): CourtMember
+	getCourtMembershipRequest(courtId: String!, memberId: String!): CourtMembershipRequest
+	getEventInfo(eventId: String!): Event
+	getInviteResponseInfo(responseId: String!): InviteResponse
+	getFollower(followeeId: String!, followerId: String!): Follower
+	getInviteInfo(inviteId: String!): InviteInfo
+	getSentPost(creatorId: String!, postedDate: String!): SentPost
+	getUserInfo(userId: String!): UserInfo
+	getComment(postId: String!, commentDate: String!): Comment
+	getMessage(threadId: String!, messageDate: String!): Message
+	getUserId(username: String!): SearchedUser
+	getUserBounty(userId: String!): UserBounty
+	getIgnoredCourt(ignorerId: String!, courtId: String!): IgnoredCourt
+	getUserRealName(userId: String!): String # Deprecated
+	getUserRealName2(userId: String!): UserRealName
+	listCourtInfos(limit: Int, nextToken: String): CourtInfoList
+	listCourtMembers(courtId: String!, limit: Int, nextToken: String): CourtMemberList
+	listCourtMembershipRequests(ownerId: String!): CourtMemberList
+	listCourtPosts(courtId: String!, limit: Int, nextToken: String): SentPostsList
+	listEventResponses(eventId: String!, limit: Int, nextToken: String): ResponseList
+	listFollowers(followeeId: String!, limit: Int, nextToken: String): FollowerList
+	listFollowing(followerId: String!, limit: Int, nextToken: String): FollowerList
+	listMemberCourts(limit: Int, memberId: String!, nextToken: String): CourtMemberList
+	listOwnerCourts(limit: Int, nextToken: String, ownerId: String!): OwnerCourtList
+	listPostComments(limit: Int, nextToken: String, postId: String!): CommentList
+	listThreadMessages(limit: Int, nextToken: String, threadId: String!): MessageList
+	listPostBounzes(limit: Int, nextToken: String, postId: String!): BounzList
+	listUserBounzes(bounzerId: String!, limit: Int, nextToken: String): BounzList
+	listUserEvents(ownerId: String!, limit: Int, nextToken: String): EventList
+	listUserInvitedEvents(inviteeId: String!, limit: Int, nextToken: String): InvitedEventsList
+	listUserReceivedPosts(receiverId: String!, limit: Int, nextToken: String): ReceivedPostsList
+	listUserSentPosts(creatorId: String!, limit: Int, nextToken: String): SentPostsList
+	listUserThreads(userId: String!, limit: Int, nextToken: String): ThreadsList
+	searchUsers(searchTerm: String!): [SearchedUser!]
+	searchCourts(searchTerm: String!): [SearchedCourt!]
+	listContentReports(limit: Int, nextToken: String): ContentReportList
+		@aws_auth(cognito_groups: ["Admin"])
+}
+
+type ReceivedPost {
+	receiverId: String!
+	postId: String!
+	receivedDate: String!
+}
+
+type ReceivedPostsList {
+	items: [ReceivedPost!]!
+	nextToken: String
+}
+
+input S3ObjectInput {
+	bucket: String!
+	key: String!
+	region: String!
+}
+
+type SearchedCourt {
+	courtId: String!
+	name: String!
+}
+
+type SearchedUser {
+	userId: String!
+	username: String!
+	name: String
+	profilePicRev: Int
+}
+
+type SentPost {
+	aspectRatio: Float!
+	bounzes: Int
+	caption: String!
+	courtId: String
+	creatorId: String!
+	postedDate: String!
+	receipts: Int
+	vibrantColor: String!
+	bounty: Int
+}
+
+type SentPostsList {
+	items: [SentPost!]!
+	nextToken: String
+}
+
+type Subscription {
+	onCreateBounz(bounzerId: String!): Bounz
+		@aws_subscribe(mutations: ["createBounz"])
+	onCreateComment(postId: String!): Comment
+		@aws_subscribe(mutations: ["createComment"])
+	onCreateMessage(threadId: String!): Message
+		@aws_subscribe(mutations: ["createMessage"])
+	onCreateReceivedPost(receiverId: String!): ReceivedPost
+		@aws_subscribe(mutations: ["createReceivedPost"])
+	onCreateSentPost(creatorId: String!): SentPost
+		@aws_subscribe(mutations: ["createPost"])
+	onDeleteBounz(bounzerId: String!): Bounz
+		@aws_subscribe(mutations: ["deleteBounz"])
+	onCreateCourtMembershipRequest(ownerId: String!): CourtMembershipRequest
+		@aws_subscribe(mutations: ["requestToJoinCourt"])
+	onDeleteComment(postId: String!): Comment
+		@aws_subscribe(mutations: ["deleteComment","adminDeleteComment"])
+	onDeleteMessage(threadId: String!): Message
+		@aws_subscribe(mutations: ["deleteMessage","adminDeleteMessage"])
+	onDeleteReceivedPost(receiverId: String!): ReceivedPost
+		@aws_subscribe(mutations: ["deleteReceivedPost"])
+	onDeleteSentPost(creatorId: String!): SentPost
+		@aws_subscribe(mutations: ["deleteSentPost","adminDeleteSentPost"])
+	onDeleteUserInfo(userId: String!): UserInfo
+		@aws_subscribe(mutations: ["deleteUserInfo"])
+	onUpdateBlockedUser(blockeeId: String!, blockerId: String!): BlockedUser
+		@aws_subscribe(mutations: ["blockUser","unblockUser"])
+	onUpdateSentPost(creatorId: String!, postedDate: String!): SentPost
+		@aws_subscribe(mutations: ["incrementSentPostBounzes","incrementSentPostReceipts","incrementSentPostBounty"])
+	onUpdateUserInfo(userId: String!): UserInfo
+		@aws_subscribe(mutations: ["updateUserInfo","updateProfilePic","incrementUserBounzesMade","incrementUserBounzesReceived","incrementUserFollowersCount","incrementUserFollowingCount","updateUsername"])
+	onUpdateCourtInfo(courtId: String!): CourtInfo
+		@aws_subscribe(mutations: ["updateCourtInfo","updateCourtPic","incrementCourtMembers","incrementCourtPostCount"])
+}
+
+input UpdateCourtInfoInput {
+	courtId: String!
+	description: String
+	color: String
+	name: String
+	restricted: Boolean
+}
+
+input UpdateCourtPicInput {
+	ownerId: String!
+	courtId: String!
+	image: S3ObjectInput!
+}
+
+input UpdateProfilePicInput {
+	userId: String!
+	image: S3ObjectInput!
+}
+
+input UpdateUserInfoInput {
+	bio: String
+	userId: String!
+	location: String
+}
+
+input UpdateUsernameInput {
+	userId: String!
+	username: String!
+}
+
+input UpdateUserRealNameInput {
+	userId: String!
+	name: String!
+	family_name: String!
+}
+
+input UserBlockedInput {
+	blocked: Boolean!
+	blockeeId: String!
+	blockerId: String!
+}
+
+type UserInfo {
+	bio: String!
+	bounzesMade: Int!
+	bounzesReceived: Int!
+	followersCount: Int!
+	followingCount: Int!
+	userId: String!
+	location: String!
+	postCount: Int!
+	profilePicRev: Int!
+	receipts: Int!
+	username: String!
+	courtsJoined: Int!
+	courtsOwned: Int!
+}
+
+type UserBounty {
+	bounty: Int
+	userId: String!
+}
+
+type UserRealName {
+	name: String
+	surname: String
+}
+
+schema {
+	query: Query
+	mutation: Mutation
+	subscription: Subscription
+}

@@ -1,0 +1,20 @@
+{
+    "version" : "2017-02-28",
+    "operation" : "UpdateItem",
+    "key" : {
+        "courtId": $util.dynamodb.toDynamoDBJson($ctx.args.input.courtId)
+    },
+    "update" : {
+    	"expression": "ADD postCount :c",
+        "expressionValues": {
+        	":c": $util.dynamodb.toDynamoDBJson($ctx.args.input.count)
+        }
+    },
+    ## This condition ensures no new records are created
+    "condition" : {
+    	"expression": "courtId = :i",
+        "expressionValues": {
+        	":i": $util.dynamodb.toDynamoDBJson($ctx.args.input.courtId)
+        }
+    }
+}

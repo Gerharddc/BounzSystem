@@ -1,0 +1,13 @@
+[
+    #foreach($entry in $context.result.suggest.suggester[0].options)
+        ## $velocityCount starts at 1 and increments with the #foreach loop **
+        #if( $velocityCount > 1 ) , #end
+        #set( $source = $entry.get("_source") )
+        $util.toJson({
+        	"username": $source.username,
+            "name": $source.name,
+            "profilePicRev": $source.profilePicRev,
+            "userId": $entry.get("_id")
+        })
+    #end
+]

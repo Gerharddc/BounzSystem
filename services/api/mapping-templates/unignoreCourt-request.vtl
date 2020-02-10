@@ -1,0 +1,12 @@
+#if($ctx.identity.username != $ctx.args.ignorerId)
+	$util.unauthorized()
+#end
+
+{
+    "version" : "2018-05-29",
+    "operation" : "DeleteItem",
+    "key" : {
+        "ignorerId": $util.dynamodb.toDynamoDBJson($ctx.args.ignorerId),
+        "courtId": $util.dynamodb.toDynamoDBJson($ctx.args.courtId)
+    }
+}
