@@ -1,5 +1,5 @@
-# BounzSystem
-This is the backend code for the Bounz social media app for which the frontend code can be found at https://github.com/Gerharddc/BounzApp. Please check out that repository for more information.
+# Bounz (Backend)
+This is the backend code for the Bounz social media app for which the frontend code can be found at https://github.com/Gerharddc/BounzApp. Please check out that repository for more information on the app.
 
 The backend makes extensive use of, especially serverless, AWS services and makes use of the Serverless Framework to facilitate simpler management and deployment.
 
